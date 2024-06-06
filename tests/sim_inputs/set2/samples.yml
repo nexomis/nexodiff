@@ -1,0 +1,14 @@
+b_labels: {batch1: batch1}
+ctrlGroups: {batch1: NT}
+desing:
+- import:
+  batch1:
+    NT:
+      C1: [NT,'0',P1,t0]
+      C2: [NT,'0',P1,t0]
+      C3: [NT,'0',P1,t0]
+    T:
+      A1: [T,'10',P1,24h]
+  path: /Users/catalinagonzalez/Documents/tools_bioinfo/nexodiff/tests/sim_inputs/set2
+g_labels: {NT: Untreated, T: Treated}
+variables: [molecule, concentration, donnor, time]

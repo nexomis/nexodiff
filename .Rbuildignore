@@ -1,0 +1,25 @@
+^.*\.Rproj$         # Designates the directory as an RStudio Project
+^\.Rproj\.user$     # Used by RStudio for temporary files
+^README\.Rmd$       # An Rmd file used to generate README.md
+^cran-comments\.md$ # Comments for CRAN submission
+^data-raw$          # Code used to create data included in the package
+^pkgdown$           # Resources used for the package website
+^_pkgdown\.yml$     # Configuration info for the package website
+^\.github$          # Contributing guidelines, CoC, issue templates, etc.
+^.*\.RData$         # Designates Rdata image
+^.*\.Rhistory		# Designates R history file
+^.devcontainer      # Remote container configuration
+^test_cache
+^test_files
+^test
+^tests/testthat/out_dir.*
+^examples
+^test.rmd
+^.gitignore
+^compute_ssh
+^\.ci
+^\.gitlab-ci.yml
+^doc
+^Meta
+^doc$
+^Meta$

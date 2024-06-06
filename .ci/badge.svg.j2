@@ -1,0 +1,22 @@
+{% set s = 70 %}
+{% set d = 50 %}
+<svg width="{{(4 * d + s * (length(type) + length(value))) / 10}}" height="20" viewBox="0 0 {{4 * d + s * (length(type) + length(value))}} 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="badge">
+  <title>badge</title>
+  <linearGradient id="a" x2="0" y2="100%">
+    <stop offset="0" stop-opacity=".1" stop-color="#EEE"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <mask id="m"><rect width="{{4 * d + s * (length(type) + length(value))}}" height="200" rx="30" fill="#FFF"/></mask>
+  <g mask="url(#m)">
+    <rect width="{{s * length(type) + 2 * d}}" height="200" fill="#555"/>
+    <rect width="{{s * length(value) + 2 * d)}}" height="200" fill="{{color}}" x="{{s * length(type) + 2 * d}}"/>
+    <rect width="{{4 * d + s * (length(type) + length(value))}}" height="200" fill="url(#a)"/>
+  </g>
+  <g aria-hidden="true" fill="#fff" text-anchor="start" font-family="Lucida Console, Courier, monospace" font-size="110">
+    <text x="{{d + 10}}" y="148" textLength="{{s * (length(type)) }}" fill="#000" opacity="0.25">{{type}}</text>
+    <text x="{{d}}" y="138" textLength="{{s * (length(type)) }}">{{type}}</text>
+    <text x="{{s * length(type) + 3 * d) + 10}}" y="148" textLength="{{s * (length(value)) }}" fill="#000" opacity="0.25">{{value}}</text>
+    <text x="{{s * length(type) + 3 * d)}}" y="138" textLength="{{s * (length(value)) }}">{{value}}</text>
+  </g>
+  
+</svg>

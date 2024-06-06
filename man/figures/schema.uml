@@ -1,0 +1,33 @@
+@startuml
+[*] --> PairwiseDesignWithAnnotation
+PairwiseDesignWithAnnotation: * Design of analysis 
+PairwiseDesignWithAnnotation: * Paths to expression files 
+PairwiseDesignWithAnnotation: * Transcriptome annotation
+note left
+ **""design_filename""**
+ **""annotation_filename""**
+ **""idmapping_filename""**
+end note
+PairwiseDesignWithAnnotation --> ExprDataTranscript : **Import data at transcript level**
+ExprDataTranscript : Expression data at transcript level
+ExprDataTranscript --> ExprDataTranscript : **Filtering**
+ExprDataTranscript --> ExprDataTranscript : **Normalization**
+ExprDataTranscript --> ExprDataGene : **Summarization**
+ExprDataGene : Expression data at gene level
+ExprDataGene --> ExprDataGene : **Filtering**
+ExprDataGene --> ExprDataGene : **Normalization**
+ExprDataGene --> PairwiseLFC
+PairwiseLFC: Pairwise Log2FC values
+PairwiseLFC: * group VS control
+PairwiseLFC: * control VS control
+PairwiseLFC --> PairwiseRstanAnalysis
+note right
+ **""statistical_models""**
+end note
+PairwiseRstanAnalysis: Bayesian inference of parameters
+PairwiseRstanAnalysis: based on statistical models
+PairwiseRstanAnalysis: modelling LFC distributions
+ExprDataGene -left-> PairwiseDESeq2
+PairwiseDESeq2: Pairwise comparisons
+PairwiseDESeq2: using DESeq2
+@enduml

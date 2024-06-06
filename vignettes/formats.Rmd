@@ -1,0 +1,201 @@
+---
+title: "File formats"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{formats}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## 1. Pairwise design format
+
+This format is used by `nexodiff::SampleInfo`
+
+The Pairwise design records all the samples with the experimental design and data filefile location. There is 2 format possible. Most of the functionalities are onbly allowed using the YML format.
+
+In a normal samplesheet data file are expected to be kallisto output using h5 format. 
+
+Batch are defined with groups of sample and only one group per batch as controle such as wihtin a batch this pacxkage allow the generation of pairwise comparison for all groups vs the control group.
+
+Alternatively this format can be used to define a meta-analysis by reusing precomputed
+
+### YML format
+
+The samplesheet yml file is structured as follow: 
+
+```{example}
+# type: [string]
+# required: F
+# additional variable in the same order as given below per sample
+variables:
+  - 'donnorID'
+  - 'tissueType'
+
+# type: list<dict<string:(string|dict)>>
+# required: T 
+design:
+  - # type: String
+    # required: T
+    # Absolute path where the file with count information are stored with the following format: {path}/{sample name}.h5
+    # For now only h5 are supported
+    path: /path/to/run1
+
+    # type: 
+    #   dict<
+    #     batchIDs:dict<
+    #       groupIDs:dict<   # if no additional vars, this can be a list of strings in place of a dict.
+    #         sampleIDs:[strings]
+    #       >
+    #     >
+    #   >
+    #   with batchIDs, groupID, sampleIDs and varIDs beings strings matching the following regex pattern (python 3.7 module re) : [a-zA-Z]+[a-zA-Z0-9_.-]*
+    # required: T 
+    # Note: Only the dictionary dict<varIDs:string|int> might be empty.
+    # Note: For now the purpose of variable is to perform an paired analysis
+    # hierarchical listing of batch (batchIDs), then groups (groupIDs), samples (sampleIDs) and finally samples variables (varIDs) with variable values.
+    import:
+      batch1:
+        group1:
+          sample1: ['1','nasal']
+          sample2: ['2','nasal']
+          sample3: ['3','nasal']
+        [...] # other groups...
+      [...] # other batches...
+
+  - path: /path/to/run2
+    import:
+       batch1:
+        group1:
+          sample4: ['a','alveol']
+          sample5: ['b','alveol']
+          sample6: ['c','alveol']
+        [...] # other groups...
+      [...] # other batches...
+
+# type: dict<string:string>
+# required: F
+# Batch full string labels for sweet viz
+b_labels:
+  batch1: Name of batch 1
+  [...]
+
+# type: dict<string:string>
+# required: F
+# Group full string labels for sweet viz
+g_labels: 
+  group1: Name of group 1
+  [...]
+
+# type: dict<string:string>
+# required: T
+# ctrl group per batch. Only one that has to be listed in design
+ctrlGroups:
+  batch1: group1
+  batch2: group8
+  [...]
+
+# type: dict<string:[strings]>
+# required: F
+# Identification of sample variable to use for paired analysis.
+paired_by:
+  batch1: ['tissueType']
+
+# type: boolean
+# required: F (default is FASLE)
+# if False , h5 files are supposed to be found for each sample.
+# if T , The differential expression results from another study is imported (rnadiff .csv outputs)
+# if T , The Samples and their specific variables are ignored and might be empty
+meta: F
+```
+
+### The csv format
+
+
+Example: 
+
+```
+batch;group;sample;ctrl
+b1;A;A1;F
+b1;A;A2;F
+b1;A;A3;F
+b1;C;C1;T
+b1;C;C2;T
+b1;C;C3;T
+```
+mandatory fields are :
+
+- batch : code for batch
+- group : code for group
+- sample : sample name
+- ctrl : T if the group is supposed to be control / F else
+
+optional fields are :
+
+- g_label : group label for figures
+- b_label : batch label for figures
+- run_id : run id if sample comes from different runs
+
+In addition other variable can be added in the csv and will be interpreted as
+additional variables. However some variable names are forbidden :
+
+- sample_base
+- replicate
+
+
+
+
+## 2. Transcriptome annotation format
+
+The transcriptome annotation file is a space delimited file without headers witht he following fields:
+
+- Transcript ID (tx_id) 
+  - Strings
+- Gene ID (gid)
+  - Strings or Integers
+- type
+  - Strings
+- Gene Symbol (symbol)
+  - Strings
+- Taxonomic ID (taxid)
+  - Integers
+- Species Names
+  - Strings
+
+Below an exemple of the first 4 lines: 
+
+```{text}
+NR_046018.2 100287102 misc_RNA DDX11L1 9606 human
+NR_024540.1 653635 misc_RNA WASH7P 9606 human
+NR_106918.1 102466751 precursor_RNA MIR6859-1 9606 human
+MIR6859-1 102466751 ncRNA MIR6859-1 9606 human
+```
+
+## id_mapping format
+
+The id mapping format is generated from the web HTTP API of UNIPROT. Belo is an example of request wich is composed of 6 columns:
+
+`https://www.uniprot.org/uniprot/?query=organism:%22homo%20sapiens%22&format=tab&force=true&columns=id,reviewed,protein%20names,genes,database(GeneID),annotation%20score&sort=score&compress=yes`
+
+- Entry
+
+Uniprot ID
+
+- Status
+
+Status `reviewed` or `unreviewed`
+
+- Protein names
+
+Long string for protein name
+
+- Gene names
+
+space separated gene reported gene names
+
+- Cross-reference (GeneID)
+
+cross-references separated and terminated by `;` with the gene ID (Entrez NCBI db)
+
+- Annotation
+
+Annotation score with the following format `X ou of 5`, X being an integer

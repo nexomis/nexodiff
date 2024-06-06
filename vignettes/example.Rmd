@@ -1,0 +1,287 @@
+---
+title: "Example"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Examples}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "",
+  fig.width=8,
+  fig.height=10,
+  fig.fullwidth=TRUE
+)
+```
+
+## Introduction
+
+The `nexodiff` package use object oriented programming base on `R6`.
+
+The different class of object are shown in this document wwith example.
+
+## CLASS: pairwise design with annotation
+
+The class `PairwiseDesignWithAnnotation` is designed to interact with 
+both the sample design with counts file paths and the transcriptome annotation.
+
+It is important to associate both because counts pointed by the design are 
+associated with a transcriptome annotation.
+
+### Initialize the object
+
+```{r}
+
+design <- nexodiff::PairwiseDesignWithAnnotation$new(
+    pairwise_design_file="../tests/data/samples.yml",
+    annotation_file="../tests/data/annotation.txt",
+    idmapping_file="../tests/data/id_mapping.tab"
+)
+
+```
+
+### Method documentation
+
+```{r, eval = F}
+help(nexodiff::PairwiseDesignWithAnnotation)
+```
+
+## CLASS : ExprData
+
+The class `ExprData` TODO Description
+
+2 different classes iherit this class : 
+
+- `ExprDataTranscript`
+- `ExprDataGene`
+
+For documentation:
+
+```{r, eval = F}
+help(nexodiff::ExprData)
+help(nexodiff::ExprDataTranscript)
+help(nexodiff::ExprDataGene)
+```
+
+### The expression data at transcript-level object is loaded from a design
+
+```{r}
+expr_data_tx=nexodiff::ExprDataTranscript$new(design,fixed_length = TRUE)
+expr_data_tx$show_etags_summary()
+```
+> FIXED LENGTH IS IMPORTANT AND MANDATORY FOR 3 PRIME
+
+### Filtering to keep only human mRNA
+
+```{r}
+expr_data_tx$select_etag_on_type("mRNA","type")
+expr_data_tx$select_etag_on_type("human","tax_name")
+expr_data_tx$show_etags_summary()
+```
+
+### Data model
+
+The raw data are stored and never modified in this object. Any filtering or 
+normalization can be reversed using the `$reset()` method.
+
+Normalization do not modify the raw data but modify normalization factors that 
+are initially set to 1.
+
+#### raw data 
+
+```{r}
+head(expr_data_tx$get_raw())
+```
+
+#### Initial normalization factors
+
+```{r}
+head(expr_data_tx$get_norm_fact())
+```
+
+#### Get normalized values
+
+> `get_norm()` return the product between raw data and normalization factor
+
+```{r}
+head(expr_data_tx$get_norm())
+```
+
+### Normalization at transcript level 
+
+```{r}
+expr_data_tx$set_intra_norm_fact("tpm")
+```
+#### Initial normalization factors
+
+```{r}
+head(expr_data_tx$get_norm_fact())
+```
+
+#### Get normalized values
+
+```{r}
+head(expr_data_tx$get_norm())
+```
+
+### The expression data at gene-level object is loaded from an expression data at transcript-level
+
+```{r}
+expr_data=nexodiff::ExprDataGene$new(expr_data_tx)
+```
+
+#### After summerization, data are not normalized
+
+```{r}
+head(expr_data$get_norm_fact())
+```
+
+### Normalization at gene level 
+
+```{r}
+expr_data$set_intra_norm_fact("tpm")
+```
+#### Initial normalization factors
+
+```{r}
+head(expr_data$get_norm_fact())
+```
+
+#### Get normalized values
+
+```{r}
+head(expr_data$get_norm())
+```
+
+### Usefull methods:
+
+#### Get groups per batches
+
+```{r}
+design$get_group_per_batches()
+```
+
+#### Get control group per batches
+
+```{r}
+design$get_control_group_per_batches()
+```
+
+#### Get data for analysis
+
+```{r}
+results = expr_data$get_pairwise_data_with_design(in_batch="batch1" ,in_group="A")
+str(results)
+```
+
+## CLASS: PairwiseDESeq2
+
+This class automatize the pairwise comparisons for DESeq2 with parallelization
+
+```{r}
+deseq <- nexodiff::PairwiseDESeq2$new(expr_data, ncpus = 4)
+
+head(deseq$get_table(in_batch="batch1" ,in_group="A"))
+```
+
+
+### results with more verbose: 
+
+
+```{r}
+
+head(deseq$get_table(in_batch="batch1" ,in_group="A", verbose = T))
+
+```
+
+### generate a list
+
+
+```{r}
+deseq$get_list(in_batch="batch1" ,in_group="A")
+
+deseq$get_list(in_batch="batch1" ,in_group="A", id = "uniprot" )
+```
+
+### Get all desired combination of lists :
+
+```{r}
+str(deseq$get_crossed_lists())
+```
+
+### Easy to summarize
+
+```{r}
+deseq$get_crossed_lists() %>% tidyr::unnest(cols = c("data")) %>% count()
+
+```
+## CLASS: PairwiseLFC
+
+This class automatize the pairwise comparisons for LFC with parallelization
+
+```{r, eval = F}
+lfc <- nexodiff::PairwiseLFC$new(expr_data, ncpus = 4)
+
+```
+
+## CLASS: RStanAnalysis 
+This class automatize the bayesian inference of the LFC distribution parameters with parallelization
+```{r, eval = F}
+option_data <- data.frame("distribution" = 1,
+                          "base_alpha_equals_0" = 1,
+                          "alpha_shift_equals_0" = 1,
+                          "base_mu_equals_0" = 0,
+                          "mu_shift_equals_0" = 0,
+                          "sigma_ratio_equals_1" = 0)
+
+params_inference <- nexodiff::RStanAnalysis$new(lfc_data, option_data = option_data,
+            ncpus = 4, seed = 1234567, iter = 3000, refresh = 0, chains = 2)
+```
+### Get data for analysis
+Raw results
+```{r, eval = F}
+raw_params <- params_inference$get_results()
+```
+Formated results
+```{r, eval = F}
+formatted_params <- params_inference$get_formatted_results(batchs="batch_1",probs=(0.25,0.5,0.75))
+```
+
+
+### Plot DESeq 2 results :
+
+```{r}
+deseq$plot_de(plot_type = "ma", geoms = c("point"),select_ids = c("gene19","gene9","gene17"), lfc_limits=c(-1,1), text_in_box = TRUE)
+```
+
+
+```{r}
+deseq$plot_de(plot_type = "vulcano", geoms = c("point"),select_ids = c("gene19","gene9","gene17"), lfc_limits=c(-1,1), text_in_box = FALSE)
+```
+
+
+```{r}
+deseq$plot_de(plot_type = "lfc_per_group", geoms = c("point","line"),select_ids = c("gene19","gene9","gene17"), lfc_limits=c(-1,1), text_in_box = TRUE)
+```
+
+
+```{r}
+deseq$plot_de(plot_type = "lfc_per_group_facet_tags", geoms = c("point","line","errorbar"),select_ids = c("gene19","gene9","gene17"), lfc_limits=c(-1,1), text_in_box = TRUE)
+```
+
+
+```{r}
+deseq$plot_de(plot_type = "lfc_per_group_facet_tags", geoms = c("bar","line"),select_ids = c("gene19","gene9","gene17"), lfc_limits=c(-1,1), text_in_box = TRUE)
+```
+
+```{r}
+deseq$plot_heatmap(select_ids=c("gene19", "gene7"))
+```
+
+```{r}
+deseq$plot_heatmap(meth_tag_value = "log2FoldChange", plot_value = "log2FoldChange") 
+```

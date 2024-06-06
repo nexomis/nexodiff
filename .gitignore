@@ -1,0 +1,51 @@
+
+# ignore system-specific or IDE specific files
+.DS_Store
+nexodiff.Rproj
+.Rproj.user
+**.swp
+**.Rproj.user
+
+# ignore build files
+man/*Rd
+inst/doc
+doc
+Meta
+NAMESPACE
+documentation.pdf
+
+# ignore testthat files
+tests/testthat/out_dir*
+tests/testthat/*.pdf
+tests/testthat/*.Robj
+tests.html
+lib
+
+# ignore data simulated with python simulation script
+tests/data
+inst/extdata/sim_data
+tests/*/*/*.h5
+tests/**.h5
+badge*.svg
+
+# ignore test files
+test.html
+test.ipynb
+test_cache
+test_files
+test/out_dir
+
+# exclude opened xlsx files
+~$*
+
+# exlude files generated from config.xlsx for tests
+**/sim_inputs/test*/annotation.txt
+**/sim_inputs/test*/design.csv
+**/sim_inputs/test*/id_mapping.tab
+**/sim_inputs/*/*.h5
+
+# ignore language specific files
+**__pycache__
+**/Rplot*
+**.RData
+**.Rhistory

@@ -1,0 +1,72 @@
+Package: nexodiff
+Type: Package
+Title: Nexomis package to establish RNA-seq differential signatures
+Version: 1.0.0
+Author: Julien FOURET <jfouret@nexomis.io>
+biocViews:
+Imports: 
+    apeglm,
+    circlize,
+    cowplot,
+    DESeq2,
+    digest,
+    dplyr,
+    egg,
+    factoextra,
+    furrr,
+    future,
+    GGally,
+    ggdendro,
+    ggfortify,
+    ggh4x,
+    ggmulti,
+    ggplot2,
+    ggpubr,
+    ggrepel,
+    ggtext,
+    gridExtra,
+    jinjar,
+    logging,
+    magrittr,
+    matrixStats,
+    methods,
+    openxlsx,
+    parallelly,
+    pkgload,
+    purrr,
+    pvclust,
+    R6,
+    readr,
+    rhdf5,
+    rstan (>= 2.18.1),
+    scales,
+    stringr,
+    tibble,
+    tidyr,
+    tidyselect,
+    tools,
+    yaml
+Maintainer: Julien FOURET <jfouret@nexomis.io>
+Description: This package provide different function to perform differential 
+    analysis.
+License: Apache-2.0
+Encoding: UTF-8
+LazyData: true
+Suggests: 
+    testthat (>= 3.0.0), knitr, rmarkdown, igraph, mathjaxr
+VignetteBuilder: knitr, rmarkdown
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+Collate: 
+    'nexodiff.r'
+    'utils.r'
+    'class_PairwiseDesignWithAnnotation.r'
+    'class_ExprData.r'
+    'class_PairwiseComp.r'
+    'class_PairwiseDESeq2.r'
+    'class_PairwiseDearseq.r'
+    'class_PairwiseLFC.r'
+    'class_RstanAnalysis.r'
+Depends: 
+    R (>= 4.0)
+RoxygenNote: 7.1.1

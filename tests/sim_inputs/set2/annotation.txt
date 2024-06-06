@@ -1,0 +1,10 @@
+g1_t1 1 mRNA g1 9606 human
+g2_t1 2 mRNA g2 9606 human
+g3_t1 3 mRNA g3 9606 human
+g4_t1 4 mRNA g4 9606 human
+g5_t1 5 mRNA g5 9606 human
+g6_t1 6 mRNA g6 9606 human
+g7_t1 7 mRNA g7 9606 human
+g8_t1 8 mRNA g8 9606 human
+g9_t1 9 mRNA g9 9606 human
+g10_t1 10 mRNA g10 9606 human
