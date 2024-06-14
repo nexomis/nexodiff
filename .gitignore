@@ -7,7 +7,6 @@ nexodiff.Rproj
 **.Rproj.user
 
 # ignore build files
-man/*Rd
 inst/doc
 doc
 Meta

@@ -7,8 +7,7 @@ First clone the repository to `PATH` and then install on R:
 ## 1.1 Build documentation
 
 ```
-devtools::build_vignettes(pkg = PATH)
-roxygen2::roxygenize(package.dir = PATH)
+apptainer run docker://quay.io/nexomis/r-nexoverse:4.3.3-Bioc_3.18-06.2024 Rscript .ci/build_local.r
 ```
 
 ## 1.2 Build and install the library

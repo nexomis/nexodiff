@@ -69,4 +69,4 @@ Collate:
     'class_RstanAnalysis.r'
 Depends: 
     R (>= 4.0)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.3.1
