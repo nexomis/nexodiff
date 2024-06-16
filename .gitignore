@@ -10,7 +10,6 @@ nexodiff.Rproj
 inst/doc
 doc
 Meta
-NAMESPACE
 documentation.pdf
 
 # ignore testthat files
