@@ -156,16 +156,24 @@ PairwiseDesignWithAnnotation <- R6::R6Class( # nolint
         for (iter_run_id in names(private$src_dir)) {
           iter_sample_info <- unique(subset(self$get_pairwise_design(),
             run_id == iter_run_id)$sample_base)
-          iter_files <- paste(private$src_dir[iter_run_id], "/",
-            iter_sample_info, ".h5", sep = "")
+          iter_files <- mapply(
+            get_counts_file_path,
+            rep(private$src_dir[iter_run_id], length(iter_sample_info)),
+            iter_sample_info,
+            SIMPLIFY = TRUE
+          )
           names(iter_files) <- unique(subset(self$get_pairwise_design(),
             run_id == iter_run_id)$sample)
           files <- c(files, iter_files)
         }
       }else {
-        files <- unique(paste(
-          private$src_dir, "/",
-          self$get_pairwise_design()$sample_base, ".h5", sep = ""))
+        iter_sample_info <- unique(self$get_pairwise_design()$sample_base)
+        files <- mapply(
+          get_counts_file_path,
+          rep(private$src_dir, length(iter_sample_info)),
+          iter_sample_info,
+          SIMPLIFY = TRUE
+        )
         names(files) <- unique(self$get_pairwise_design()$sample)
       }
       files
@@ -534,6 +542,9 @@ PairwiseDesignWithAnnotation <- R6::R6Class( # nolint
         annotations[["uniprot"]] <- list()
       }
 
+      print("### DEBUG ###")
+      print(annotation_file)
+
       annotation <- readr::read_delim(annotation_file, delim = " ",
         col_names = c("txid", "gid", "type", "symbol", "tax_id", "tax_name"),
         col_types = vroom::cols("c", "c", "c", "c", "c", "c"))
@@ -662,7 +673,7 @@ create_id_mappings <- function(
     (uniprotgid$score >= unreviewed_min_scores[1]))
   )
   l_uniprotgid <-
-    tidyr::separate_rows(filter_uniprotgid, .data$gid, sep = ";") %>%
+    tidyr::separate_rows(filter_uniprotgid, "gid", sep = ";") %>%
     bind_rows() %>%
     filter(.data$gid != "")
   dups <- l_uniprotgid$gid[duplicated(l_uniprotgid$gid)] # dups definition here
@@ -676,7 +687,7 @@ create_id_mappings <- function(
     (uniprotgid$score >= unreviewed_min_scores[2]))
   )
   l_uniprotgid <-
-    tidyr::separate_rows(filter_uniprotgid, .data$gid, sep = ";") %>%
+    tidyr::separate_rows(filter_uniprotgid, "gid", sep = ";") %>%
     bind_rows() %>%
     filter(.data$gid != "")
   l_dups <- subset(l_uniprotgid, (l_uniprotgid$gid %in% dups))

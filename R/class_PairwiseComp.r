@@ -220,11 +220,13 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       crossed_df$design_id <- NULL
       crossed_df <- crossed_df %>%
         dplyr::relocate(
-          .data$batch,
-          .data$group,
-          .data$lfc_abs_lim,
-          .data$min_signif,
-          .data$type
+          tidyselect::all_of(c(
+            "batch",
+            "group",
+            "lfc_abs_lim",
+            "min_signif",
+            "type"
+          ))
         )
       crossed_df$data <- purrr::map(
         seq_len(nrow(crossed_df)),

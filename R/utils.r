@@ -78,6 +78,7 @@ make_test_data_from_xlsx <- function(set_id) {
     "tax_id",
     "tax_name"
   )]
+  annotation$tax_name <- stringr::str_replace(annotation$tax_name, " ", "_")
   readr::write_delim(
     annotation,
     quote = "none",
@@ -298,5 +299,22 @@ set_mean_function <- function(mean_arg) {
     })
   } else {
     logging::error("mean function not recognized")
+  }
+}
+
+# Utils function to generate file paths for counts files and check 
+# their existence
+get_counts_file_path <- function(src_dir, sample_name) {
+  # Construct the potential file paths
+  path_abundance <- file.path(src_dir, sample_name, "abundance.h5")
+  path_simple <- file.path(src_dir, paste0(sample_name, ".h5"))
+
+  # Check file existence and decide which path to return
+  if (file.exists(path_abundance)) {
+    return(path_abundance)
+  } else if (file.exists(path_simple)) {
+    return(path_simple)
+  } else {
+    stop("No valid file found for sample: ", sample_name)
   }
 }

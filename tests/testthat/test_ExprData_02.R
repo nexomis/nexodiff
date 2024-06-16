@@ -27,7 +27,7 @@ testthat::test_that("testing etags type counts", {
     as.matrix(expr_data_tx$show_etags_summary()$tax_name),
     as.matrix(c(
     "human" = 15L,
-    "synthetic construct" = 4L
+    "synthetic_construct" = 4L
     ))
   )
   testthat::expect_identical(
