@@ -27,6 +27,7 @@ Extension of expression dataset at transcript-level
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="filter_and_get_len"><a href='../../nexodiff/html/ExprData.html#method-ExprData-filter_and_get_len'><code>nexodiff::ExprData$filter_and_get_len()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="filter_and_get_raw"><a href='../../nexodiff/html/ExprData.html#method-ExprData-filter_and_get_raw'><code>nexodiff::ExprData$filter_and_get_raw()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="filter_and_set_selected_ids"><a href='../../nexodiff/html/ExprData.html#method-ExprData-filter_and_set_selected_ids'><code>nexodiff::ExprData$filter_and_set_selected_ids()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="get_annotation"><a href='../../nexodiff/html/ExprData.html#method-ExprData-get_annotation'><code>nexodiff::ExprData$get_annotation()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="get_design"><a href='../../nexodiff/html/ExprData.html#method-ExprData-get_design'><code>nexodiff::ExprData$get_design()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="get_inter_norm_fact_opts"><a href='../../nexodiff/html/ExprData.html#method-ExprData-get_inter_norm_fact_opts'><code>nexodiff::ExprData$get_inter_norm_fact_opts()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="get_intra_norm_fact_method"><a href='../../nexodiff/html/ExprData.html#method-ExprData-get_intra_norm_fact_method'><code>nexodiff::ExprData$get_intra_norm_fact_method()</code></a></span></li>
@@ -54,6 +55,7 @@ Initialize \code{ExprDataTranscript} object
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ExprDataTranscript$new(
   design,
+  annotation,
   with_fixed_length = FALSE,
   log_level = "WARN",
   format = "kallisto"
@@ -63,8 +65,9 @@ Initialize \code{ExprDataTranscript} object
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{design}}{The design with transcriptome annotation
-\link{PairwiseDesignWithAnnotation}}
+\item{\code{design}}{A pairwise design object \link{PairwiseDesign}}
+
+\item{\code{annotation}}{An annotation object \link{Annotation}}
 
 \item{\code{with_fixed_length}}{A boolean indicating whether the NGS library is
 of a fixed length like 3 prime or not}

@@ -13,7 +13,7 @@ all samples.
 \item effective lengths of expressed tags (genes or transcripts) for all samples.
 \item normalization factors for expressed tags (genes or transcripts) for all
 samples.
-\item design and annotation information; see \link{PairwiseDesignWithAnnotation}
+\item design and annotation information; see \link{PairwiseDesignWith}
 for details.
 }
 
@@ -56,6 +56,7 @@ show_etags_summary("raw")
 \item \href{#method-ExprData-get_main_etag}{\code{ExprData$get_main_etag()}}
 \item \href{#method-ExprData-is_at_gene_level}{\code{ExprData$is_at_gene_level()}}
 \item \href{#method-ExprData-get_design}{\code{ExprData$get_design()}}
+\item \href{#method-ExprData-get_annotation}{\code{ExprData$get_annotation()}}
 \item \href{#method-ExprData-sum_per_type_per_sample}{\code{ExprData$sum_per_type_per_sample()}}
 \item \href{#method-ExprData-plot_sum_per_type_per_sample}{\code{ExprData$plot_sum_per_type_per_sample()}}
 \item \href{#method-ExprData-plot_dist_per_sample}{\code{ExprData$plot_dist_per_sample()}}
@@ -519,14 +520,28 @@ T or F
 \if{html}{\out{<a id="method-ExprData-get_design"></a>}}
 \if{latex}{\out{\hypertarget{method-ExprData-get_design}{}}}
 \subsection{Method \code{get_design()}}{
-Extract the PairwiseDeisgnWithAnnotation instance that were used to
+Extract the PairwiseDesign instance that were used to
 build the expression data object.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ExprData$get_design()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
-\code{PairwiseDeisgnWithAnnotation} object
+\code{PairwiseDesign} object
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ExprData-get_annotation"></a>}}
+\if{latex}{\out{\hypertarget{method-ExprData-get_annotation}{}}}
+\subsection{Method \code{get_annotation()}}{
+Extract the Annotation instance that were used to
+build the expression data object.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ExprData$get_annotation()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+\code{Annotation} object
 }
 }
 \if{html}{\out{<hr>}}
@@ -732,7 +747,7 @@ the following value of plot_type:
 
 \item{\code{prcomp_autoplot_args}}{list of argument that are used with autoplot
 to plot the prcomp object (see ggfortify autoplot.pca_common). Note that
-the design is given as data therefore the variable defined in the deisgn
+the design is given as data therefore the variable defined in the design
 can be used.}
 
 \item{\code{dist_method}}{distand method, see dist function}
@@ -853,7 +868,7 @@ the following value of plot_type:
 
 \item{\code{prcomp_autoplot_args}}{list of argument that are used with autoplot
 to plot the prcomp object (see ggfortify autoplot.pca_common). Note that
-the design is given as data therefore the variable defined in the deisgn
+the design is given as data therefore the variable defined in the design
 can be used.}
 
 \item{\code{include_ctrl_at_group_scale}}{whether to include the controls at

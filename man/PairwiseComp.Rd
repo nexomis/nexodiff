@@ -105,7 +105,7 @@ groups}
 meaningful names}
 
 \item{\code{add_ids}}{Character vector; see \code{to} argument of method
-\code{generate_translate_dict} from class \link{PairwiseDesignWithAnnotation}
+\code{generate_translate_dict} from class \link{Annotation}
 Available options are: "gid", "symbol", "uniprot", "protein_names",
 "type", and "tax_name"}
 }
@@ -144,7 +144,7 @@ batches}
 groups}
 
 \item{\code{id}}{Character vector; see \code{to} argument of method
-\code{generate_translate_dict} from class \link{PairwiseDesignWithAnnotation}}
+\code{generate_translate_dict} from class \link{Annotation}}
 
 \item{\code{use_padj}}{Whether to use the adjusted p-value or not}
 

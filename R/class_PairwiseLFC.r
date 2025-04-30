@@ -1,5 +1,4 @@
 #' @include utils.r
-#' @include class_PairwiseDesignWithAnnotation.r
 #' @include class_ExprData.r
 
 NULL

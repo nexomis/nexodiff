@@ -23,6 +23,8 @@ vignette defining file formats.
 \itemize{
 \item \href{#method-Annotation-new}{\code{Annotation$new()}}
 \item \href{#method-Annotation-generate_translate_dict}{\code{Annotation$generate_translate_dict()}}
+\item \href{#method-Annotation-get_from_ids}{\code{Annotation$get_from_ids()}}
+\item \href{#method-Annotation-get_to_ids}{\code{Annotation$get_to_ids()}}
 \item \href{#method-Annotation-clone}{\code{Annotation$clone()}}
 }
 }
@@ -34,7 +36,7 @@ Initialize a new \code{Annotation} object.
 
 This method initializes a new \code{Annotation} object.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Annotation$new(annotation = NULL, format_gff = NULL, idmapping = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Annotation$new(annotation = NULL, format_gff = TRUE, idmapping = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -116,6 +118,39 @@ on id type for keys
 
 \subsection{Returns}{
 a named vector that can translate from an id type to another
+Get the list of id type available for translate dicttionary as keys
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Annotation-get_from_ids"></a>}}
+\if{latex}{\out{\hypertarget{method-Annotation-get_from_ids}{}}}
+\subsection{Method \code{get_from_ids()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Annotation$get_from_ids()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+vecotr with potentioal key "from"
+Get the list of id type available for translate dicttionary as values
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Annotation-get_to_ids"></a>}}
+\if{latex}{\out{\hypertarget{method-Annotation-get_to_ids}{}}}
+\subsection{Method \code{get_to_ids()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Annotation$get_to_ids(from)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{from}}{the key of the translate dictionary}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+vecotr with potentioal key "to"
 }
 }
 \if{html}{\out{<hr>}}

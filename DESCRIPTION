@@ -64,7 +64,7 @@ Collate:
     'nexodiff.r'
     'utils.r'
     'class_Annotation.r'
-    'class_PairwiseDesignWithAnnotation.r'
+    'class_PairwiseDesign.r'
     'class_ExprData.r'
     'class_PairwiseComp.r'
     'class_PairwiseDESeq2.r'
