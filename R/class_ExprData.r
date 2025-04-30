@@ -1,5 +1,6 @@
 #' @include utils.r
-#' @include class_PairwiseDesignWithAnnotation.r
+#' @include class_Annotation.r
+#' @include class_PairwiseDesign.r
 
 NULL
 
@@ -13,7 +14,7 @@ NULL
 #' * effective lengths of expressed tags (genes or transcripts) for all samples.
 #' * normalization factors for expressed tags (genes or transcripts) for all
 #' samples.
-#' * design and annotation information; see \link{PairwiseDesignWithAnnotation}
+#' * design and annotation information; see \link{PairwiseDesignWith}
 #' for details.
 #'
 #' By convention, the dataset is represented as a matrix:
@@ -60,7 +61,7 @@ NULL
 #' - hclust when dim_reduce is not null
 #' @param prcomp_autoplot_args list of argument that are used with autoplot
 #' to plot the prcomp object (see ggfortify autoplot.pca_common). Note that
-#' the design is given as data therefore the variable defined in the deisgn
+#' the design is given as data therefore the variable defined in the design
 #' can be used.
 #' @param include_ctrl_at_group_scale whether to include the controls at
 #' group scale
@@ -121,15 +122,15 @@ ExprData <- R6::R6Class("ExprData", # nolint
       if (type == "etags") {
         for (metric_id in c("tax_id", "tax_name", "type")) {
           results[[metric_id]] <- table(
-            private$design$generate_translate_dict(etag_id, metric_id)[etags]
+            private$annotation$generate_translate_dict(etag_id, metric_id)[etags]
           )
         }
         results$tax_id <- table(
-          private$design$generate_translate_dict(etag_id, "tax_id")[etags])
+          private$annotation$generate_translate_dict(etag_id, "tax_id")[etags])
         results$tax_name <- table(
-          private$design$generate_translate_dict(etag_id, "tax_name")[etags])
+          private$annotation$generate_translate_dict(etag_id, "tax_name")[etags])
         results$type <- table(
-          private$design$generate_translate_dict(etag_id, "type")[etags])
+          private$annotation$generate_translate_dict(etag_id, "type")[etags])
       } else {
         if (type == "raw") {
           data <- as.data.frame(self$filter_and_get_raw(in_batch))
@@ -141,7 +142,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
         }
         for (metric_id in c("tax_id", "tax_name", "type")) {
           data[, metric_id] <-
-            private$design$generate_translate_dict(
+            private$annotation$generate_translate_dict(
               etag_id, metric_id)[row.names(data)]
           results[[metric_id]] <-
             aggregate(formula(paste(". ~", metric_id)), data, sum)
@@ -177,7 +178,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
       }
 
       etags <- row.names(private$raw)
-      filter_dict <- private$design$generate_translate_dict(
+      filter_dict <- private$annotation$generate_translate_dict(
         etag_id, filtered_var)
 
       if (filter_type == "keep") {
@@ -618,8 +619,10 @@ ExprData <- R6::R6Class("ExprData", # nolint
 
     #' @description
     #' Compute the normalized expression data from raw and norm matrices.
-    #' > IMPORTANT: Default is no normalization. Please use the function below
+    #' 
+    #' **IMPORTANT**: Default is no normalization. Please use the function below
     #' beforehand.
+    #' 
     #' - "compute_and_set_intra_norm_fact"
     #' - "compute_and_set_inter_norm_fact"
     #' Note that intra normalization is always applied, however inter norm is
@@ -667,11 +670,20 @@ ExprData <- R6::R6Class("ExprData", # nolint
     },
 
     #' @description
-    #' Extract the PairwiseDeisgnWithAnnotation instance that were used to
+    #' Extract the PairwiseDesign instance that were used to
     #' build the expression data object.
-    #' @return `PairwiseDeisgnWithAnnotation` object
+    #' @return `PairwiseDesign` object
     get_design = function() {
       private$design
+    },
+
+
+    #' @description
+    #' Extract the Annotation instance that were used to
+    #' build the expression data object.
+    #' @return `Annotation` object
+    get_annotation = function() {
+      private$annotation
     },
 
     #' @description
@@ -681,7 +693,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #'  - sample: sample name
     #'  - total: Sum of count or normalized value
     sum_per_type_per_sample = function(intra_norm = FALSE, log2_expr = FALSE) {
-      to_type <- private$design$generate_translate_dict(
+      to_type <- private$annotation$generate_translate_dict(
         private$main_etag, "type")
       format_data <- function(data) {
         data$type <- to_type[row.names(data)]
@@ -907,7 +919,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
         dict_ids <- private$selected_ids
         names(dict_ids) <- dict_ids
       } else {
-        dict_ids <- private$design$generate_translate_dict(
+        dict_ids <- private$annotation$generate_translate_dict(
           private$main_etag,
           tag_type
         )
@@ -1253,9 +1265,9 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #genes/tx per sample. gene or tx id as rownames and sample as colnames.
     intra_norm_fact = NULL,
     inter_norm_fact = NULL,
-    #A PairwiseDeisgnWithAnnotation object that describes the samples
-    # (with annotation description)
+    #A PairwiseDesign object that describes the samples
     design = NULL,
+    annotation = NULL,
     # Normalization method for norm factors
     intra_norm_fact_method = NULL,
     inter_norm_fact_opts = NULL,
@@ -1480,6 +1492,7 @@ ExprDataGene <- R6::R6Class("ExprDataGene", # nolint
     initialize = function(expr_data_transcript) {
 
       private$design <- expr_data_transcript$get_design()
+      private$annotation <- expr_data_transcript$get_annotation()
       private$with_fixed_length <- expr_data_transcript$is_with_fixed_length()
       private$intra_norm_fact_method <- "none"
       private$inter_norm_fact_opts <- NULL
@@ -1488,7 +1501,7 @@ ExprDataGene <- R6::R6Class("ExprDataGene", # nolint
       private$at_gene_level <- TRUE
       # Summarize raw counts
 
-      txid2tgid <- private$design$generate_translate_dict(
+      txid2tgid <- private$annotation$generate_translate_dict(
         expr_data_transcript$get_main_etag(), private$main_etag)
 
       private$raw <- as.data.frame(expr_data_transcript$get_raw())
@@ -1566,18 +1579,20 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
   public = list(
     #' @description
     #' Initialize `ExprDataTranscript` object
-    #' @param design The design with transcriptome annotation
-    #' \link{PairwiseDesignWithAnnotation}
+    #' @param design A pairwise design object \link{PairwiseDesign}
+    #' @param annotation An annotation object \link{Annotation}
     #' @param with_fixed_length A boolean indicating whether the NGS library is
     #' of a fixed length like 3 prime or not
     #' @param log_level Level of logging (see logging package). Default = WARN
     #' @param format Format of files. Default=kallisto
     #' Default = txid
     #' @return A new `ExprDataTranscript` object.
-    initialize = function(design, with_fixed_length = FALSE, log_level = "WARN",
+    initialize = function(design, annotation, with_fixed_length = FALSE, log_level = "WARN",
       format = "kallisto") {
       logging::basicConfig(log_level)
+
       private$design <- design
+      private$annotation <- annotation
       private$at_gene_level <- FALSE
       private$intra_norm_fact_method <- "none"
       private$inter_norm_fact_opts <- NULL

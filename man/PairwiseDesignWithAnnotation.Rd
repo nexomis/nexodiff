@@ -4,11 +4,6 @@
 \alias{PairwiseDesignWithAnnotation}
 \title{Class representing metadata for expression data: Design and Gene annotation}
 \description{
-Class representing metadata for expression data: Design and Gene annotation
-
-Class representing metadata for expression data: Design and Gene annotation
-}
-\details{
 An R6 class to represent metadata for expression data. It combines a pairwise
 design of experiments with a 2-level structure and transcriptome annotation.
 Specifically, it provides the following features:
@@ -25,44 +20,10 @@ control group used as a reference for pairwise comparisons
 \item Association of gene IDs with gene symbols, protein IDs (UniProt), etc.
 }
 }
-
-Below is precised what is available and id type for value depending
-on id type for keys
-\itemize{
-\item Entrez Gene ID \code{gid} (Or equivalent on Ensembl,UCSC...)
-\itemize{
-\item Gene symbol \code{symbol}
-\item Protein name \code{protein_names}
-\item Protein ID \code{uniprot}
-\item Taxon ID \code{tax_id}
-\item Taxon name \code{tax_name}
-\item Typed gene ID \code{tgid}
 }
-\item RefSeq transcript ID \code{txid} (Or equivalent on Ensembl,UCSC...)
-\itemize{
-\item Entrez Gene ID \code{gid}
-\item rna type \code{type}
-\item Taxon ID \code{tax_id}
-\item Taxon name \code{tax_name}
-\item Typed gene ID \code{tgid}
-}
-\item Typed gene ID \code{tgid} i.e. gene id with type concatenated (sep is _)
-(one gene can have several type, some coding, some not coding)
-\itemize{
-\item Gene symbol \code{symbol}
-\item Protein name \code{protein_names} (warning even if not coding type)
-\item Protein ID \code{uniprot} (warning even if not coding type)
-\item rna type \code{type}
-\item Taxon ID \code{tax_id}
-\item Taxon name \code{tax_name}
-}
-\item Uniprot protein ID \code{uniprot}
-\itemize{
-\item Entrez Gene ID \code{gid}
-\item Protein name \code{protein_names}
-\item Gene symbol \code{symbol}
-}
-}
+\details{
+For more information on how to specify the arguments, please refer to the
+vignette defining file formats.
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -89,6 +50,11 @@ on id type for keys
 \if{html}{\out{<a id="method-PairwiseDesignWithAnnotation-new"></a>}}
 \if{latex}{\out{\hypertarget{method-PairwiseDesignWithAnnotation-new}{}}}
 \subsection{Method \code{new()}}{
+Initialize a new \code{PairwiseDesignWithAnnotation} object.
+
+This method initializes a new \code{PairwiseDesignWithAnnotation} object.
+The object represents metadata for expression data, including pairwise
+design of experiments and transcriptome annotation.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{PairwiseDesignWithAnnotation$new(
   pairwise_design_file,
@@ -139,6 +105,46 @@ based on the annotation
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Details}{
+Below is precised what is available and id type for value depending
+on id type for keys
+\itemize{
+\item Entrez Gene ID \code{gid} (Or equivalent on Ensembl,UCSC...)
+\itemize{
+\item Gene symbol \code{symbol}
+\item Protein name \code{protein_names}
+\item Protein ID \code{uniprot}
+\item Taxon ID \code{tax_id}
+\item Taxon name \code{tax_name}
+\item Typed gene ID \code{tgid}
+}
+\item RefSeq transcript ID \code{txid} (Or equivalent on Ensembl,UCSC...)
+\itemize{
+\item Entrez Gene ID \code{gid}
+\item rna type \code{type}
+\item Taxon ID \code{tax_id}
+\item Taxon name \code{tax_name}
+\item Typed gene ID \code{tgid}
+}
+\item Typed gene ID \code{tgid} i.e. gene id with type concatenated (sep is _)
+(one gene can have several type, some coding, some not coding)
+\itemize{
+\item Gene symbol \code{symbol}
+\item Protein name \code{protein_names} (warning even if not coding type)
+\item Protein ID \code{uniprot} (warning even if not coding type)
+\item rna type \code{type}
+\item Taxon ID \code{tax_id}
+\item Taxon name \code{tax_name}
+}
+\item Uniprot protein ID \code{uniprot}
+\itemize{
+\item Entrez Gene ID \code{gid}
+\item Protein name \code{protein_names}
+\item Gene symbol \code{symbol}
+}
+}
+}
+
 \subsection{Returns}{
 a named vector that can translate from an id type to another
 }
@@ -206,10 +212,7 @@ samples in those batches.}
 samples in those groups.}
 
 \item{\code{in_run}}{A character vector of run IDs. Select or report only samples
-in those runs.
-
-For more information on how to specify the arguments, please refer to the
-vignette defining file formats.}
+in those runs.}
 
 \item{\code{basename}}{whether to return the basename in place of the complete
 name (with run id)}
@@ -289,10 +292,7 @@ samples in those batches.}
 samples in those groups.}
 
 \item{\code{in_run}}{A character vector of run IDs. Select or report only samples
-in those runs.
-
-For more information on how to specify the arguments, please refer to the
-vignette defining file formats.}
+in those runs.}
 }
 \if{html}{\out{</div>}}
 }
@@ -338,10 +338,7 @@ samples in those batches.}
 samples in those groups.}
 
 \item{\code{in_run}}{A character vector of run IDs. Select or report only samples
-in those runs.
-
-For more information on how to specify the arguments, please refer to the
-vignette defining file formats.}
+in those runs.}
 }
 \if{html}{\out{</div>}}
 }

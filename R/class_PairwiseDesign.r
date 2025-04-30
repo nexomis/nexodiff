@@ -2,8 +2,9 @@
 
 NULL
 
-#' Class representing metadata for expression data: Design and Gene annotation
+#' Class representing metadata for expression data: Design
 #'
+#' @description
 #' An R6 class to represent metadata for expression data. It combines a pairwise
 #' design of experiments with a 2-level structure and transcriptome annotation.
 #' Specifically, it provides the following features:
@@ -11,9 +12,6 @@ NULL
 #'   - Samples are regrouped into *groups*
 #'   - Groups are regrouped into *batches*, where one group is designed as the
 #' control group used as a reference for pairwise comparisons
-#' - Transcriptome annotation:
-#'   - Association of transcript IDs with gene IDs, RNA types, and species
-#'   - Association of gene IDs with gene symbols, protein IDs (UniProt), etc.
 #'
 #' @param in_batch A character vector of batch codes. Select or report only
 #' samples in those batches.
@@ -22,31 +20,28 @@ NULL
 #' @param in_run A character vector of run IDs. Select or report only samples
 #' in those runs.
 #'
+#' @details
 #' For more information on how to specify the arguments, please refer to the
 #' vignette defining file formats.
-#'
 #' @export
-PairwiseDesignWithAnnotation <- R6::R6Class( # nolint
-  "PairwiseDesignWithAnnotation",
+PairwiseDesign <- R6::R6Class( # nolint
+  "PairwiseDesign",
   public <- list(
-    #' Initialize a new `PairwiseDesignWithAnnotation` object.
+    #' @description
+    #' Initialize a new `PairwiseDesign` object.
     #'
-    #' This method initializes a new `PairwiseDesignWithAnnotation` object.
+    #' This method initializes a new `PairwiseDesign` object.
     #' The object represents metadata for expression data, including pairwise
     #' design of experiments and transcriptome annotation.
     #'
     #' @param pairwise_design_file Path to the pairwise design file, which must
     #' be in .yml or .csv format.
-    #' @param annotation_file Path to the annotation file (mapping txid to gid).
-    #' @param idmapping_file Path to the idmapping file, which allows the
-    #' mapping of uniprot id to gene id.
     #' @param src_dir Path(s) specified only in case of csv file with the path
     #' for each run to the folder with expression files. In case of several runs
     #' defined in the design file, a named vector is required. Can be specified
     #' for YML also but only 1 value for all runs.
     #'
     #' @return A new `PairwiseDesignWithAnnotation` object.
-    #' @export
     initialize = function(pairwise_design_file, annotation_file,
       idmapping_file, src_dir = NULL) {
 
@@ -75,62 +70,7 @@ PairwiseDesignWithAnnotation <- R6::R6Class( # nolint
         stop()
       }
 
-      private$initialize_annotation(annotation_file, idmapping_file)
-      # RAW NAMES MUST NOT BE USED BECAUSE SAMPLE MIGHT NOT BE UNIQUE
-
       private$selected_samples <- private$pairwise_design$sample
-    },
-
-    #' @description
-    #' generate a translate dictionary (named vector) from and id to another
-    #' based on the annotation
-    #' @param from the id type corresponding to the keys
-    #' @param to the id type corresponding to the values
-    #' @details
-    #' Below is precised what is available and id type for value depending
-    #' on id type for keys
-    #' * Entrez Gene ID `gid` (Or equivalent on Ensembl,UCSC...)
-    #'   * Gene symbol `symbol`
-    #'   * Protein name `protein_names`
-    #'   * Protein ID `uniprot`
-    #'   * Taxon ID `tax_id`
-    #'   * Taxon name `tax_name`
-    #'   * Typed gene ID `tgid`
-    #' * RefSeq transcript ID `txid` (Or equivalent on Ensembl,UCSC...)
-    #'   * Entrez Gene ID `gid`
-    #'   * rna type `type`
-    #'   * Taxon ID `tax_id`
-    #'   * Taxon name `tax_name`
-    #'   * Typed gene ID `tgid`
-    #' * Typed gene ID `tgid` i.e. gene id with type concatenated (sep is _)
-    #' (one gene can have several type, some coding, some not coding)
-    #'   * Gene symbol `symbol`
-    #'   * Protein name `protein_names` (warning even if not coding type)
-    #'   * Protein ID `uniprot` (warning even if not coding type)
-    #'   * rna type `type`
-    #'   * Taxon ID `tax_id`
-    #'   * Taxon name `tax_name`
-    #' * Uniprot protein ID `uniprot`
-    #'   * Entrez Gene ID `gid`
-    #'   * Protein name `protein_names`
-    #'   * Gene symbol `symbol`
-    #' @return a named vector that can translate from an id type to another
-    generate_translate_dict = function(from, to) {
-      if (! from %in% names(private$annotations)) {
-        logging::logerror(
-          "The `from` argument is not recognized in annotations"
-        )
-        logging::logerror(str(private$annotations))
-        stop()
-      }
-      if (! to %in% names(private$annotations[[from]])) {
-        logging::logerror(
-          "The `to` argument is not recognized in annotations"
-        )
-        logging::logerror(str(private$annotations[[to]]))
-        stop()
-      }
-      private$annotations[[from]][[to]]
     },
 
     #' @description
@@ -524,200 +464,6 @@ PairwiseDesignWithAnnotation <- R6::R6Class( # nolint
       data_g_labels <- dplyr::distinct(pairwise_design[, c("group", "g_label")])
       private$g_labels <- data_g_labels$g_label
       names(private$g_labels) <- data_g_labels$group
-    },
-
-    # initialize annotation
-    initialize_annotation = function(annotation_file, idmapping_file) {
-
-      logging::logdebug("Begin annotation parsing")
-
-      # Parse annotation
-      annotations <- list(
-        "gid" = list(),
-        "txid" = list(),
-        "tgid" = list()
-      )
-
-      if (!is.null(idmapping_file)) {
-        annotations[["uniprot"]] <- list()
-      }
-
-      print("### DEBUG ###")
-      print(annotation_file)
-
-      annotation <- readr::read_delim(annotation_file, delim = " ",
-        col_names = c("txid", "gid", "type", "symbol", "tax_id", "tax_name"),
-        col_types = vroom::cols("c", "c", "c", "c", "c", "c"))
-
-      # Remove the last digits in transcript ids that are version dependent.
-      annotation$txid <- stringr::str_remove(annotation$txid, "-\\d+$")
-
-      dest_vector <- c("type", "tax_id", "tax_name", "gid")
-
-      for (dest in dest_vector) {
-          annotations[["txid"]][[dest]] <- annotation[[dest]]
-          names(annotations[["txid"]][[dest]]) <- annotation$txid
-      }
-
-      annotation_gene <- unique(annotation[, -1])
-      dest_vector <- c("symbol", "tax_id", "tax_name")
-      for (dest in dest_vector) {
-        annotations[["gid"]][[dest]] <- annotation_gene[[dest]]
-        names(annotations[["gid"]][[dest]]) <- annotation_gene$gid
-      }
-
-      if (! is.null(idmapping_file)) {
-        logging::logdebug("run create_id_mappings function")
-        idmapping <- create_id_mappings(idmapping_file, annotation_file)
-        logging::logdebug("finished create_id_mappings function")
-        gidmapping <- idmapping %>%
-          group_by(gid) %>%
-          summarise(uniprot = paste(unique(uniprot), collapse = ";"),
-            protein_names = paste(unique(protein_names), collapse = ";"))
-
-        dest_vector <- c("protein_names", "uniprot")
-        for (dest in dest_vector) {
-          annotations[["gid"]][[dest]] <- gidmapping[[dest]]
-        names(annotations[["gid"]][[dest]]) <- gidmapping$gid
-        }
-
-        dest_vector <- c("protein_names", "gid")
-        for (dest in dest_vector) {
-          annotations[["uniprot"]][[dest]] <- (idmapping[[dest]])
-          names(annotations[["uniprot"]][[dest]]) <- idmapping$uniprot
-        }
-
-        annotations[["uniprot"]][["symbol"]] <-
-          annotations[["gid"]][["symbol"]][annotations[["uniprot"]][["gid"]]]
-        names(annotations[["uniprot"]][["symbol"]]) <- idmapping$uniprot
-
-      }
-
-
-      df <- data.frame(
-        txid = names(annotations[["txid"]][["gid"]]),
-        gid = annotations[["txid"]][["gid"]],
-        type = annotations[["txid"]][["type"]]
-      )
-
-      df$tgid <- stringr::str_c(df$gid, df$type, sep = "_")
-
-      annotations[["txid"]][["tgid"]] <- df$tgid
-      names(annotations[["txid"]][["tgid"]]) <- df$txid
-
-      df_gid_tgid <- unique(df[, c("gid", "tgid")])
-      df_type_tgid <- unique(df[, c("type", "tgid")])
-
-      annotations[["tgid"]] <- list()
-
-      annotations[["tgid"]][["txid"]] <- df[["txid"]]
-      names(annotations[["tgid"]][["txid"]]) <- df[["tgid"]]
-
-      annotations[["tgid"]][["gid"]] <- df_gid_tgid[["gid"]]
-      names(annotations[["tgid"]][["gid"]]) <- df_gid_tgid[["tgid"]]
-
-      annotations[["tgid"]][["type"]] <- df_type_tgid[["type"]]
-      names(annotations[["tgid"]][["type"]]) <- df_type_tgid[["tgid"]]
-
-      dest_vector <-
-        c("protein_names", "uniprot", "symbol", "tax_id", "tax_name")
-      for (dest in dest_vector) {
-        annotations[["tgid"]][[dest]] <-
-          annotations[["gid"]][[dest]][df_gid_tgid[["gid"]]]
-        names(annotations[["tgid"]][[dest]]) <- df_gid_tgid[["tgid"]]
-      }
-
-      private$annotations <- annotations
-
-      logging::logdebug("End of annotation parsing")
     }
   )
 )
-
-# utils function for this class only
-# scores min given for unique first and then for dups before merging
-create_id_mappings <- function(
-  uniprot_mapping_file, annotationfile,
-  outfile = NULL, reviewed_min_scores = c(1, 4),
-  unreviewed_min_scores = c(2, 5)) {
-  # package dplyr required for %>% operator
-  suppressWarnings(suppressMessages(require(dplyr, quietly = TRUE)))
-  idmapping <- read.delim(uniprot_mapping_file, as.is = TRUE)
-  annotation <- unique(read.table(
-    annotationfile, header = FALSE, as.is = TRUE
-  )[, c(2, 4)])
-  names(annotation) <- c("gid", "symbol")
-  if (ncol(idmapping) == 6) {
-    names(idmapping) <-
-      c("uniprot", "status", "names", "symbol", "gid", "score")
-  }else if (ncol(idmapping) == 5) {
-    names(idmapping) <- c("uniprot", "status", "names", "gid", "score")
-  }else {
-    stop("Uniprot mapping file not recognized")
-  }
-
-  idmapping$score <- as.integer(gsub(" out of 5", "", idmapping$score))
-  # NB We do not consider protein spanning different genes that may be
-  # fusion protein or readthrough transcripts
-  idmapping <- idmapping[stringr::str_count(idmapping$gid, ";") == 1, ]
-  uniprotgid <- idmapping[, c("uniprot", "gid", "status", "score")]
-  uniprotgid <- subset(uniprotgid, uniprotgid$gid != "")
-  status_levels <- c("unreviewed", "reviewed")
-  uniprotgid$status <- factor(uniprotgid$status, levels = status_levels)
-
-  # get unique
-  filter_uniprotgid <- subset(uniprotgid,
-    ((uniprotgid$status == "reviewed") &
-    (uniprotgid$score >= reviewed_min_scores[1])) |
-    ((uniprotgid$status == "unreviewed") &
-    (uniprotgid$score >= unreviewed_min_scores[1]))
-  )
-  l_uniprotgid <-
-    tidyr::separate_rows(filter_uniprotgid, "gid", sep = ";") %>%
-    bind_rows() %>%
-    filter(.data$gid != "")
-  dups <- l_uniprotgid$gid[duplicated(l_uniprotgid$gid)] # dups definition here
-  l_unique <- subset(l_uniprotgid, !(l_uniprotgid$gid %in% dups))
-
-  # get dups
-  filter_uniprotgid <- subset(uniprotgid,
-    ((uniprotgid$status == "reviewed") &
-    (uniprotgid$score >= reviewed_min_scores[2])) |
-    ((uniprotgid$status == "unreviewed") &
-    (uniprotgid$score >= unreviewed_min_scores[2]))
-  )
-  l_uniprotgid <-
-    tidyr::separate_rows(filter_uniprotgid, "gid", sep = ";") %>%
-    bind_rows() %>%
-    filter(.data$gid != "")
-  l_dups <- subset(l_uniprotgid, (l_uniprotgid$gid %in% dups))
-
-  resolved <- l_dups %>%
-    group_by(.data$gid) %>%
-    filter(.data$score == max(c(0, .data$score)),
-      .data$status == status_levels[min(c(2, as.integer(.data$status)))]
-    ) %>%
-    group_by(.data$gid) %>%
-    mutate(uniprot = (function(x) paste0(x, collapse = ";"))(.data$uniprot))
-
-  resolved <- subset(resolved, resolved$uniprot != "")
-  gid2uniprot <- c(l_unique$uniprot, resolved$uniprot)
-  names(gid2uniprot) <- c(l_unique$gid, resolved$gid)
-
-  l_resolved <- tidyr::separate_rows(resolved, "uniprot", sep = ";")
-
-  idmappings_final <- rbind(as.data.frame(l_unique), as.data.frame(l_resolved))
-  idmappings_final$status <- NULL
-  idmappings_final$score <- NULL
-
-  uniprot2protname <- idmapping$names
-  names(uniprot2protname) <- idmapping$uniprot
-  idmappings_final$protein_names <- uniprot2protname[idmappings_final$uniprot]
-  gid2symbol <- annotation$symbol
-  names(gid2symbol) <- as.character(annotation$gid)
-  idmappings_final$symbol <- gid2symbol[idmappings_final$gid]
-  if (!is.null(outfile)) {
-    write.table(idmappings_final, outfile, sep = "\t", row.names = FALSE)
-  }
-  return(idmappings_final)
-}

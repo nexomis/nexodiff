@@ -7,7 +7,7 @@
 Extension of expression dataset at transcript-level
 }
 \section{Super class}{
-\code{nexodiff::ExprData} -> \code{ExprDataTranscript}
+\code{\link[nexodiff:ExprData]{nexodiff::ExprData}} -> \code{ExprDataTranscript}
 }
 \section{Methods}{
 \subsection{Public methods}{

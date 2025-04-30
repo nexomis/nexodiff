@@ -142,8 +142,6 @@ additional variables. However some variable names are forbidden :
 - replicate
 
 
-
-
 ## 2. Transcriptome annotation format
 
 The transcriptome annotation file is a space delimited file without headers witht he following fields:
@@ -160,7 +158,7 @@ The transcriptome annotation file is a space delimited file without headers with
   - Integers
 - Species Names
   - Strings
-
+o
 Below an exemple of the first 4 lines: 
 
 ```{text}
@@ -174,28 +172,17 @@ MIR6859-1 102466751 ncRNA MIR6859-1 9606 human
 
 The id mapping format is generated from the web HTTP API of UNIPROT. Belo is an example of request wich is composed of 6 columns:
 
-`https://www.uniprot.org/uniprot/?query=organism:%22homo%20sapiens%22&format=tab&force=true&columns=id,reviewed,protein%20names,genes,database(GeneID),annotation%20score&sort=score&compress=yes`
+`https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Creviewed%2Cprotein_name%2Cgene_names%2Cxref_geneid%2Cannotation_score&format=tsv&query=(*)+AND+(model_organism%3A9606)`
 
 - Entry
-
 Uniprot ID
-
 - Status
-
 Status `reviewed` or `unreviewed`
-
 - Protein names
-
 Long string for protein name
-
 - Gene names
-
 space separated gene reported gene names
-
-- Cross-reference (GeneID)
-
+- GeneID
 cross-references separated and terminated by `;` with the gene ID (Entrez NCBI db)
-
 - Annotation
-
-Annotation score with the following format `X ou of 5`, X being an integer
+Annotation score (float) 5.0 is the best score

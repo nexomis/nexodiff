@@ -47,3 +47,8 @@ test/out_dir
 **/Rplot*
 **.RData
 **.Rhistory
+
+.gitlab-ci.yml
+**.so
+**.o
+

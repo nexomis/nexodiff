@@ -2,12 +2,14 @@
 % Please edit documentation in R/class_PairwiseComp.r
 \name{PairwiseComp}
 \alias{PairwiseComp}
-\title{Pairwise Comparison Class}
+\title{Generate Crossed Lists from Nested Results}
 \description{
 A class representing a nested representation of pairwise
 comparisons given a pairwise design.
 }
 \details{
+Pairwise Comparison Class
+
 This class serves as a superclass for all methods of pairwise comparisons
 considered in this package. It defines the shared public and private methods
 common to all subclass.
@@ -15,6 +17,10 @@ common to all subclass.
 Pairwise comparisons are used in experimental designs with test vs control
 samples, comparing their expression tags to determine deregulation between
 conditions.
+
+This function filters the results table based on specified groups and
+batches. Note that the term "filter" in this context does not refer to a
+statistical filter.
 }
 \section{Attributes}{
 
@@ -105,12 +111,6 @@ Available options are: "gid", "symbol", "uniprot", "protein_names",
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Details}{
-This function filters the results table based on specified groups and
-batches. Note that the term "filter" in this context does not refer to a
-statistical filter.
-}
-
 \subsection{Returns}{
 A data.frame containing filtered results with optional additional
 ID columns
@@ -183,8 +183,7 @@ nested results using multiple filtering criteria.
 \item{\code{cross_id}}{Character vector; see \code{id} argument in
 \code{\link{generate_a_list}} method}
 
-\item{\code{use_padj}}{Logical; whether to use the adjusted p-value (TRUE) or
-not (FALSE, default: TRUE)}
+\item{\code{use_padj}}{Whether to use the adjusted p-value or not}
 
 \item{\code{cross_type}}{Vector of deregulation types; see \code{type} argument in
 \code{\link{generate_a_list}} method
@@ -567,19 +566,14 @@ Return HEATmap for a batch
 
 \item{\code{max_abs_value_plot}}{maximum value for values to plot}
 
-\item{\code{cut_tree_k}}{if provided with cut the heatmap into pieces based}
-
 \item{\code{cut_tree_k}}{if provided with cut the heatmap into pieces based
-on the hclust}
-
-\item{\code{show_selected_ids}}{whether to show or not the selected ids.}
-
-\item{\code{show_selected_ids}}{whether to show or not the selected ids.
 on the hclust
 \itemize{
 \item "log2FoldChange"
 \item "z" : z-score
 }}
+
+\item{\code{show_selected_ids}}{whether to show or not the selected ids.}
 
 \item{\code{meth_tag_dist2}}{\code{meth_dist} for \code{build_tag_hclust()} when finding
 gene cluster if cut_tree_k is not null}

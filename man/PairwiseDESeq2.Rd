@@ -13,7 +13,7 @@ design using the DESeq2 package.
 This class inherits from the "PairwiseComp" class.
 }
 \section{Super class}{
-\code{nexodiff::PairwiseComp} -> \code{PairwiseDESeq2}
+\code{\link[nexodiff:PairwiseComp]{nexodiff::PairwiseComp}} -> \code{PairwiseDESeq2}
 }
 \section{Methods}{
 \subsection{Public methods}{

@@ -429,7 +429,10 @@ lists with all normalizations options
 \if{html}{\out{<a id="method-ExprData-compute_norm"></a>}}
 \if{latex}{\out{\hypertarget{method-ExprData-compute_norm}{}}}
 \subsection{Method \code{compute_norm()}}{
-Compute the normalized expression data from raw and norm matrices.IMPORTANT: Default is no normalization. Please use the function belowbeforehand.
+Compute the normalized expression data from raw and norm matrices.
+
+\strong{IMPORTANT}: Default is no normalization. Please use the function below
+beforehand.
 \itemize{
 \item "compute_and_set_intra_norm_fact"
 \item "compute_and_set_inter_norm_fact"

@@ -36,6 +36,7 @@ Imports:
     purrr,
     pvclust,
     R6,
+    Rcpp,
     readr,
     rhdf5,
     rstan (>= 2.18.1),
@@ -57,9 +58,12 @@ Suggests:
 VignetteBuilder: knitr, rmarkdown
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
-Collate: 
+LinkingTo: Rcpp
+Collate:
+    'RcppExports.R'
     'nexodiff.r'
     'utils.r'
+    'class_Annotation.r'
     'class_PairwiseDesignWithAnnotation.r'
     'class_ExprData.r'
     'class_PairwiseComp.r'
@@ -67,6 +71,8 @@ Collate:
     'class_PairwiseDearseq.r'
     'class_PairwiseLFC.r'
     'class_RstanAnalysis.r'
+    'fetch_id_mapping.r'
+    'parse_gff_to_annotation.r'
 Depends: 
     R (>= 4.0)
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2

@@ -7,7 +7,7 @@
 Extension of expression dataset at gene-level.
 }
 \section{Super class}{
-\code{nexodiff::ExprData} -> \code{ExprDataGene}
+\code{\link[nexodiff:ExprData]{nexodiff::ExprData}} -> \code{ExprDataGene}
 }
 \section{Methods}{
 \subsection{Public methods}{

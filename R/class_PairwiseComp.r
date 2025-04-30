@@ -1,10 +1,11 @@
 #' @include utils.r
-#' @include class_PairwiseDesignWithAnnotation.r
+#' @include class_PairwiseDesign.r
+#' @include class_Annotation.r
 #' @include class_ExprData.r
 
 NULL
 
-#' @title Pairwise Comparison Class
+#' Pairwise Comparison Class
 #'
 #' @description A class representing a nested representation of pairwise
 #' comparisons given a pairwise design.
@@ -37,7 +38,7 @@ NULL
 #' @param in_group Vector of group codes; select or report only samples in these
 #' groups
 #' @param id Character vector; see `to` argument of method
-#' `generate_translate_dict` from class \link{PairwiseDesignWithAnnotation}
+#' `generate_translate_dict` from class \link{Annotation}
 #' @param use_padj Whether to use the adjusted p-value or not
 #' @param type Type of deregulation: "deregulated", "upregulated", or
 #' "downregulated"
@@ -77,7 +78,7 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
     #' @param verbose If TRUE, the column names are replaced with more
     #' meaningful names
     #' @param add_ids Character vector; see `to` argument of method
-    #' `generate_translate_dict` from class \link{PairwiseDesignWithAnnotation}
+    #' `generate_translate_dict` from class \link{Annotation}
     #' Available options are: "gid", "symbol", "uniprot", "protein_names",
     #' "type", and "tax_name"
     #' @return A data.frame containing filtered results with optional additional
@@ -99,7 +100,7 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       table[, base_id] <- table$tag_id
       table$tag_id <- NULL
       for (id in add_ids){
-        table[, id] <- private$expr_data$get_design()$generate_translate_dict(
+        table[, id] <- private$expr_data$get_annotation()$generate_translate_dict(
           base_id, id)[table[, base_id]]
       }
       if (verbose) {
@@ -186,8 +187,6 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
     #'
     #' @param cross_id Character vector; see `id` argument in
     #' \code{\link{generate_a_list}} method
-    #' @param use_padj Logical; whether to use the adjusted p-value (TRUE) or
-    #' not (FALSE, default: TRUE)
     #' @param cross_type Vector of deregulation types; see `type` argument in
     #' \code{\link{generate_a_list}} method
     #' Available options are: "deregulated", "upregulated", "downregulated"
@@ -398,7 +397,7 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       data$tag_id <- NULL
 
       for (id in tag_ids){
-        data[, id] <- private$expr_data$get_design()$generate_translate_dict(
+        data[, id] <- private$expr_data$get_annotation()$generate_translate_dict(
           base_id, id)[as.vector(data[, base_id])[[1]]]
       }
 
@@ -916,12 +915,9 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
     #' @param show_selected_ids whether to show or not the selected ids.
     #' @param plot_value value to plot
     #' @param cut_tree_k if provided with cut the heatmap into pieces based
-    #' @param show_selected_ids whether to show or not the selected ids.
     #' on the hclust
     #' * "log2FoldChange"
     #' * "z" : z-score
-    #' @param cut_tree_k if provided with cut the heatmap into pieces based
-    #' on the hclust
     #' @return The plot
     plot_heatmap = function(meth_tag_dist = "minkowski",
       meth_tag_clust = "centroid", meth_tag_value = "z",

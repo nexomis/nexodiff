@@ -21,6 +21,9 @@
 #' * \href{./PairwiseLFC.html}{PairwiseLFC}
 #' * \href{./PairwiseDESeq2.html}{PairwiseDESeq2}
 #'
-#' @docType package
+#' @docType _PACKAGE
 #' @name nexodiff
+#' @import Rcpp
+#' @importFrom Rcpp evalCpp
+#' @useDynLib nexodiff
 NULL
