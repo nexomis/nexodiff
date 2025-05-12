@@ -42,8 +42,8 @@ This method initializes a new \code{Annotation} object.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{annotation}}{Path to the annotation file in GFF format / or as described in the vignette.
-can be a vector of files.}
+\item{\code{annotation}}{Path to the annotation file in GFF format / or as
+described in the vignette. It can be a vector of files.}
 
 \item{\code{format_gff}}{If \code{TRUE}, the annotation file is in GFF format.}
 

@@ -21,8 +21,8 @@ Annotation <- R6::R6Class( # nolint
     #' Initialize a new `Annotation` object.
     #'
     #' This method initializes a new `Annotation` object.
-    #' @param annotation Path to the annotation file in GFF format / or as described in the vignette.
-    #'  can be a vector of files.
+    #' @param annotation Path to the annotation file in GFF format / or as
+    #'  described in the vignette. It can be a vector of files.
     #' @param format_gff If `TRUE`, the annotation file is in GFF format.
     #' @param idmapping Path to the idmapping file, which allows the
     #' mapping of uniprot id to gene id. If not give, the idmapping file will be
@@ -31,19 +31,26 @@ Annotation <- R6::R6Class( # nolint
     initialize = function(
       annotation = NULL,
       format_gff = TRUE,
-      idmapping = NULL) {
+      idmapping = NULL
+    ) {
 
       if (format_gff) {
-        # If the annotation file is in GFF format, parse it using the parse_gff_to_annotation function
+        # If the annotation file is in GFF format, parse it using the parse_gff
+        # to_annotation function
         annotation <- data.table::rbindlist(
           lapply(annotation, parse_gff_to_annotation)
         )
       } else {
-        # If the annotation file is not in GFF format, read it using data.table::fread
+        # If the annotation file is not in GFF format, read it using
+        # data.table::fread
         annotation <- data.table::rbindlist(lapply(annotation, function(x) {
-          data.table::fread(x, sep = " ",
-            col.names = c("txid", "gid", "type", "symbol", "tax_id", "tax_name"),
-            colTypes = c("c", "c", "c", "c", "c", "c"))
+          data.table::fread(
+            x, sep = " ",
+            col.names = c(
+              "txid", "gid", "type", "symbol", "tax_id", "tax_name"
+            ),
+            colTypes = c("c", "c", "c", "c", "c", "c")
+          )
         }))
       }
 
@@ -103,8 +110,7 @@ Annotation <- R6::R6Class( # nolint
     },
 
     #' Get the list of id type available for translate dicttionary as keys
-    #' 
-    #' 
+    #'
     #' @return vecotr with potentioal key "from"
     get_from_ids = function() {
       names(private$annotations)
@@ -293,13 +299,13 @@ create_uniprot_gene_id_mappings <- function(
   data.table::setorder(dups_idmapping, -status, -score)
 
   dups_idmapping <- dups_idmapping[, .SD[1], by = gid]
-  setcolorder(dups_idmapping, names(unique_idmapping))
+  data.table::setcolorder(dups_idmapping, names(unique_idmapping))
   final_idmapping <- data.table::rbindlist(
     list(unique_idmapping, dups_idmapping)
   )
 
-  final_idmapping[, score:= NULL]
-  final_idmapping[, status:= NULL]
+  final_idmapping[, score:= NULL] # nolint object_usage_linter
+  final_idmapping[, status:= NULL] # nolint object_usage_linter
 
   gid2uniprot <- final_idmapping$uniprot
   names(gid2uniprot) <- final_idmapping$gid

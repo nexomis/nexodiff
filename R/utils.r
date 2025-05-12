@@ -1,5 +1,7 @@
 #' @include nexodiff.r
 #' @importFrom magrittr %>%
+#' @importFrom data.table .SD
+#' @importFrom data.table :=
 #' @import dplyr
 #' @import ggfortify
 

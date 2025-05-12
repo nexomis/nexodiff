@@ -8,6 +8,7 @@ Imports:
     apeglm,
     circlize,
     cowplot,
+    data.table,
     DESeq2,
     digest,
     dplyr,
