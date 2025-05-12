@@ -132,6 +132,123 @@ Annotation <- R6::R6Class( # nolint
         )
       }
       names(private$annotations[[from]])
+    },
+
+    #' @description
+    #' Export annotation data to a data.frame for a given 'from' ID type.
+    #'
+    #' For a specified 'from' ID type, this method creates a data.frame
+    #' where each row corresponds to a unique 'from' ID, and columns
+    #' represent all associated 'to' ID types. Missing associations
+    #' will be represented as NA.
+    #'
+    #' @param from The primary ID type (e.g., "gid", "txid") to use for rows.
+    #' @return A data.frame with the 'from' ID type as the first column,
+    #'   followed by columns for each derivable 'to' ID type. Returns an
+    #'   empty data.frame if 'from' is invalid or no data can be constructed.
+    export_to_df = function(from) {
+      if (!from %in% self$get_from_ids()) {
+        logging::logwarn(
+          sprintf("Annotation$export_to_df: 'from' ID type '%s' is not valid. Valid types are: %s",
+                  from, paste(self$get_from_ids(), collapse = ", "))
+        )
+        return(data.frame())
+      }
+
+      to_ids <- self$get_to_ids(from)
+
+      all_unique_from_ids <- character(0)
+      for (to_name in to_ids) {
+        if (!is.null(private$annotations[[from]][[to_name]])) {
+          all_unique_from_ids <- union(all_unique_from_ids, names(private$annotations[[from]][[to_name]]))
+        }
+      }
+
+      all_unique_from_ids <- sort(unique(all_unique_from_ids))
+
+      if (length(all_unique_from_ids) == 0) {
+        # Construct an empty data frame with correct column names
+        col_names <- c(from, to_ids)
+        # Ensure no zero-length column names if to_ids is empty
+        if (length(to_ids) == 0 && from == "") col_names <- character(0)
+        else if (length(to_ids) == 0) col_names <- from
+
+        empty_df <- data.frame(matrix(ncol = length(col_names), nrow = 0))
+        if(length(col_names) > 0) colnames(empty_df) <- col_names
+        return(empty_df)
+      }
+
+      data_list <- list()
+      data_list[[from]] <- all_unique_from_ids
+
+      if (length(to_ids) > 0) {
+          for (to_id_type in to_ids) {
+            mapping_vector <- private$annotations[[from]][[to_id_type]]
+            # Ensure mapping_vector is not NULL before subsetting
+            if (!is.null(mapping_vector)) {
+                values <- mapping_vector[all_unique_from_ids]
+                # If a to_id_type results in all NAs or is problematic, handle gracefully
+                data_list[[to_id_type]] <- values
+            } else {
+                # If a specific to_id_type has no mapping vector, fill with NAs
+                data_list[[to_id_type]] <- rep(NA, length(all_unique_from_ids))
+            }
+          }
+      }
+      
+      df <- as.data.frame(data_list, stringsAsFactors = FALSE)
+
+      if (ncol(df) > 0 && names(df)[1] != from) {
+        names(df)[1] <- from
+      }
+
+      return(df)
+    },
+
+    #' @description
+    #' Write all annotation data frames to a specified directory.
+    #'
+    #' This method iterates through all available 'from' ID types,
+    #' generates a data.frame for each using `self$export_to_df()`,
+    #' and writes each data.frame to a CSV file named after the
+    #' 'from' ID type (e.g., "gid.csv") in the specified directory.
+    #'
+    #' @param directory_path The path to the directory where CSV files
+    #'   will be written. The directory will be created if it does not exist.
+    #' @return Invisibly returns TRUE if successful, or FALSE/throws error on failure.
+    #'   Logs information about files written or warnings for types with no data.
+    write_to_directory = function(directory_path) {
+      if (missing(directory_path) || !is.character(directory_path) || length(directory_path) != 1 || nchar(directory_path) == 0) {
+        logging::logerror("Annotation$write_to_directory: 'directory_path' must be a non-empty string.")
+        return(invisible(FALSE))
+      }
+
+      if (!dir.exists(directory_path)) {
+        logging::loginfo(sprintf("Annotation$write_to_directory: Creating directory: %s", directory_path))
+        dir.create(directory_path, showWarnings = FALSE, recursive = TRUE)
+      }
+
+      all_from_types <- self$get_from_ids()
+      if (length(all_from_types) == 0) {
+        logging::logwarn("Annotation$write_to_directory: No 'from' ID types available to export.")
+        return(invisible(TRUE)) # No error, but nothing to do
+      }
+
+      success_all <- TRUE
+      for (current_from_type in all_from_types) {
+        df_to_write <- self$export_to_df(current_from_type)
+
+        if (!is.null(df_to_write) && inherits(df_to_write, "data.frame") && nrow(df_to_write) > 0) {
+          file_name <- paste0(current_from_type, ".csv")
+          output_path <- file.path(directory_path, file_name)
+          data.table::fwrite(df_to_write, output_path, row.names = FALSE, na = "NA")
+        } else {
+          logging::logwarn(
+            sprintf("Annotation$write_to_directory: No data to write for 'from' ID type '%s'. Skipping.", current_from_type)
+          )
+        }
+      }
+      return(invisible(success_all))
     }
 
   ),
