@@ -52,3 +52,4 @@ test/out_dir
 **.so
 **.o
 
+/tests/ena_datasets/ERX1492351_out/

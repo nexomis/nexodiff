@@ -1,0 +1,5 @@
+languageserver
+roxygen2
+testthat
+vdiffr
+devtools

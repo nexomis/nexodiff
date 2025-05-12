@@ -1,33 +1,22 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
-// https://github.com/microsoft/vscode-dev-containers/tree/v0.231.6/containers/debian
+
 {
-	"name": "Debian",
+	"name": "Ubuntu",
 	"build": {
 		"dockerfile": "Dockerfile",
-		// Update 'VARIANT' to pick an Debian version: bullseye, buster
-		// Use bullseye on local arm64/Apple Silicon.
 		"args": { 
-			"VARIANT": "bullseye"
+			"VARIANT": "noble"
 		 }
 	},
-
-	// Set *default* container specific settings.json values on container create.
-	"settings": {},
-
-	// Add the IDs of extensions you want installed when the container is created.
-	"extensions": [
-		"rogalmic.bash-debug",
-		"mads-hartmann.bash-ide-vscode",
-		"mhutchie.git-graph",
-		"donjayamanne.githistory",
-		"gitlab.gitlab-workflow",
-		"eamodio.gitlens",
-		"mikhail-arkhipov.r",
-		"reditorsupport.r",
-		"rdebugger.r-debugger",
-		"ms-toolsai.jupyter",
-		"ms-python.python"
-	],
 		
-	"remoteUser": "vscode"
+	"remoteUser": "vscode",
+
+	"extensions": [
+		"saoudrizwan.claude-dev",
+		"streetsidesoftware.code-spell-checker",
+		"Continue.continue",
+		"REditorSupport.r",
+		"quarto.quarto",
+		"mechatroner.rainbow-csv"
+	]
+
 }
