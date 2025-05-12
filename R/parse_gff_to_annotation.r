@@ -30,11 +30,12 @@ parse_gff_to_annotation <- function(
     tool <- "cat"
   }
   
+  logging::logdebug("parse_gff_to_annotation: Reading GFF data using fread")
   gff_data <- data.table::fread(
     cmd = paste(tool, gff_file, "| grep -v '^#' | cut -f 1,3,9"),
     sep = "\t",
     header = FALSE,
-    col.names = c("source","type", "attributes"),
+    col.names = c("source", "type", "attributes"),
     fill = TRUE
   )
   
@@ -63,6 +64,7 @@ parse_gff_to_annotation <- function(
   data.table::setnames(parsed_data, 
                       c("txid", "gid", "symbol", "type"))
 
+  logging::logdebug("parse_gff_to_annotation: Fetching scientific names from EBI API")
   query = paste0(paste(unique(source2taxon), collapse = "%20OR%20tax_id%3D"))
   url = paste0(
     "https://www.ebi.ac.uk/ena/portal/api/search?result=taxon&query=tax_id%3D",
@@ -70,6 +72,7 @@ parse_gff_to_annotation <- function(
     "&fields=scientific_name,tax_id&format=tsv",
     sep = ""
   )
+  logging::logdebug("parse_gff_to_annotation: Fetching Done")
 
   tax2name_dt <- data.table::fread(
     cmd = paste0("curl -Ss '", url, "'", sep = ""),

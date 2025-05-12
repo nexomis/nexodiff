@@ -31,10 +31,13 @@ Annotation <- R6::R6Class( # nolint
     initialize = function(
       annotation = NULL,
       format_gff = TRUE,
-      idmapping = NULL
+      idmapping = NULL,
+      log_level = "WARN"
     ) {
+      logging::basicConfig(log_level)
 
       if (format_gff) {
+        logging::logdebug("Annotation$initialize: Parsing GFF annotation")
         # If the annotation file is in GFF format, parse it using the parse_gff
         # to_annotation function
         annotation <- data.table::rbindlist(
@@ -43,6 +46,7 @@ Annotation <- R6::R6Class( # nolint
       } else {
         # If the annotation file is not in GFF format, read it using
         # data.table::fread
+        logging::logdebug("Annotation$initialize: Reading non-GFF annotation")
         annotation <- data.table::rbindlist(lapply(annotation, function(x) {
           data.table::fread(
             x, sep = " ",
@@ -54,6 +58,7 @@ Annotation <- R6::R6Class( # nolint
         }))
       }
 
+      logging::logdebug("Annotation$initialize: Calling private$initialize_annotation")
       private$initialize_annotation(annotation, idmapping)
     },
 
@@ -135,10 +140,7 @@ Annotation <- R6::R6Class( # nolint
     annotations = NULL,
 
     # initialize annotation
-    initialize_annotation = function(annotation ,idmapping) {
-
-      logging::logdebug("Begin annotation parsing")
-
+    initialize_annotation = function(annotation, idmapping) {
       # Parse annotation
       annotations <- list(
         "gid" = list(),
@@ -146,13 +148,11 @@ Annotation <- R6::R6Class( # nolint
         "tgid" = list(),
         "uniprot" = list()
       )
-      
 
       # Remove the last digits in transcript ids that are version dependent.
       annotation[, txid := stringr::str_remove(txid, "-\\d+$")]
 
       if (is.null(idmapping)) {
-        logging::logdebug("idmapping is NULL, fetching from UniProt")
         idmapping <- data.table::rbindlist(lapply(
           unique(annotation$tax_id),
           fetch_id_mapping
@@ -173,12 +173,11 @@ Annotation <- R6::R6Class( # nolint
         names(annotations[["gid"]][[dest]]) <- annotation_gene$gid
       }
 
-      logging::logdebug("run create_id_mappings function")
+      logging::logdebug("Annotation$private$initialize_annotation: Run create_id_mappings function")
       # Get unique gene IDs and symbols from the annotation data
       annotation_dt <- unique(annotation[, .(gid, symbol)])
       # Create the id mappings
       id_mappings <- create_uniprot_gene_id_mappings(idmapping, annotation_dt)
-      logging::logdebug("finished create_id_mappings function")
 
       annotations[["uniprot"]][["gid"]] <- id_mappings[["uniprot2gid"]]
       annotations[["uniprot"]][["protein_names"]] <- id_mappings[["uniprot2name"]]
@@ -189,7 +188,6 @@ Annotation <- R6::R6Class( # nolint
 
       annotations[["uniprot"]][["symbol"]] <- annotations[["gid"]][["symbol"]][annotations[["uniprot"]][["gid"]]]
       names(annotations[["uniprot"]][["symbol"]]) <- names(annotations[["uniprot"]][["gid"]])
-
 
       df <- data.frame(
         txid = names(annotations[["txid"]][["gid"]]),
@@ -226,7 +224,6 @@ Annotation <- R6::R6Class( # nolint
 
       private$annotations <- annotations
 
-      logging::logdebug("End of annotation parsing")
     }
   )
 )

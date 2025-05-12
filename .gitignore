@@ -53,3 +53,8 @@ test/out_dir
 **.o
 
 /tests/ena_datasets/ERX1492351_out/
+
+/vignettes/example_cache
+/vignettes/example.html
+/vignettes/example.rmarkdown
+/vignettes/example_files
