@@ -1,0 +1,5 @@
+input: ERX1492351_samples.csv
+out_dir: ERX1492351_out
+reference: reference_human_kallisto.csv
+min_len: 31
+kraken2_db: https://genome-idx.s3.amazonaws.com/kraken/k2_viral_20250402.tar.gz

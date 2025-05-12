@@ -1,0 +1,7 @@
+sample_name,path_r1,path_r2,reference,strand,is_3prime,frag_size,frag_size_sd
+ERR1421767,https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR142/007/ERR1421767/ERR1421767.fastq.gz,,human_ncbi_hg38_v40,rf-stranded,true,-1,-1
+ERR1421768,https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR142/008/ERR1421768/ERR1421768.fastq.gz,,human_ncbi_hg38_v40,rf-stranded,true,-1,-1
+ERR1421769,https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR142/009/ERR1421769/ERR1421769.fastq.gz,,human_ncbi_hg38_v40,rf-stranded,true,-1,-1
+ERR1421773,https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR142/003/ERR1421773/ERR1421773.fastq.gz,,human_ncbi_hg38_v40,rf-stranded,true,-1,-1
+ERR1421774,https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR142/004/ERR1421774/ERR1421774.fastq.gz,,human_ncbi_hg38_v40,rf-stranded,true,-1,-1
+ERR1421775,https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR142/005/ERR1421775/ERR1421775.fastq.gz,,human_ncbi_hg38_v40,rf-stranded,true,-1,-1

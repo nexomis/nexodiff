@@ -1,0 +1,7 @@
+batch;group;sample;ctrl
+batch1;control;ERR1421767;T
+batch1;control;ERR1421768;T
+batch1;control;ERR1421769;T
+batch1;test;ERR1421773;F
+batch1;test;ERR1421774;F
+batch1;test;ERR1421775;F
