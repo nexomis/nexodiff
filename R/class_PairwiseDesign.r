@@ -42,8 +42,7 @@ PairwiseDesign <- R6::R6Class( # nolint
     #' for YML also but only 1 value for all runs.
     #'
     #' @return A new `PairwiseDesignWithAnnotation` object.
-    initialize = function(pairwise_design_file, annotation_file,
-      idmapping_file, src_dir = NULL) {
+    initialize = function(pairwise_design_file, src_dir = NULL) {
 
       logging::logdebug("Parse pairwise design")
 

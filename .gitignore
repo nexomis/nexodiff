@@ -58,3 +58,5 @@ test/out_dir
 /vignettes/example.html
 /vignettes/example.rmarkdown
 /vignettes/example_files
+/vignettes/directory_with_annot
+/vignettes/GCF*

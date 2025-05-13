@@ -62,7 +62,7 @@ parse_gff_to_annotation <- function(
   data.table::setDT(parsed_data)
 
   data.table::setnames(parsed_data, 
-                      c("txid", "gid", "symbol", "type"))
+                      c("txid", "gid", "type", "symbol"))
 
   logging::logdebug("parse_gff_to_annotation: Fetching scientific names from EBI API")
   query = paste0(paste(unique(source2taxon), collapse = "%20OR%20tax_id%3D"))

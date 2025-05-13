@@ -50,12 +50,7 @@ This method initializes a new \code{PairwiseDesign} object.
 The object represents metadata for expression data, including pairwise
 design of experiments and transcriptome annotation.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{PairwiseDesign$new(
-  pairwise_design_file,
-  annotation_file,
-  idmapping_file,
-  src_dir = NULL
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{PairwiseDesign$new(pairwise_design_file, src_dir = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

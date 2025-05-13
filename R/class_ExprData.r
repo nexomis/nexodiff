@@ -697,8 +697,8 @@ ExprData <- R6::R6Class("ExprData", # nolint
         private$main_etag, "type")
       format_data <- function(data) {
         data$type <- to_type[row.names(data)]
-         temp <- tidyr::pivot_longer(aggregate(. ~ type, data, sum),
-           cols = -type, names_to = "sample", values_to = "total")
+          temp <- tidyr::pivot_longer(aggregate(. ~ type, data, sum),
+            cols = -type, names_to = "sample", values_to = "total")
          return(subset(temp, total > 10))
       }
 

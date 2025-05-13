@@ -38,7 +38,7 @@ DataFrame parse_gff_attributes(CharacterVector attr_strings, CharacterVector typ
             std::string value2;
             if (getline(token_ss2, key2, ':')) {
               if (getline(token_ss2, value2, ',')) {
-                if (key2 == "Genbank") {
+                if (key2 == "GenBank") {
                   tx_id[i] = value2;
                 } else if (key2 == "GeneID") {
                   gene_id[i] = value2;
