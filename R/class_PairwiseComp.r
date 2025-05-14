@@ -52,6 +52,8 @@ NULL
 #' @param select_ids Vector of IDs (`tag_id_select`) to select the genes
 #' @param facet_scales scales = "fixed" by default
 #' @param facet_space space = "fixed" by default
+#' @param safe_translate If TRUE, the function will keep original ids
+#' if the translation fails
 #' @export
 PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
 
@@ -84,8 +86,10 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
     #' @return A data.frame containing filtered results with optional additional
     #' ID columns
     filter_and_get_results = function(in_batch, in_group, verbose = FALSE,
-      add_ids = c("gid", "symbol", "uniprot", "protein_names", "type",
-      "tax_name")) {
+      add_ids = c(
+        "gid", "symbol", "uniprot", "protein_names", "type", "tax_name"
+      ),
+      safe_translate = FALSE) {
       # TODO error handling if batch/group does not exists
       table <- private$results %>%
         dplyr::filter(
@@ -100,8 +104,20 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       table[, base_id] <- table$tag_id
       table$tag_id <- NULL
       for (id in add_ids){
-        table[, id] <- private$expr_data$get_annotation()$generate_translate_dict(
-          base_id, id)[table[, base_id]]
+        if (id != base_id) {
+          if (safe_translate) {
+            table[, id] <- safe_translate_ids(
+              private$expr_data$get_annotation()$generate_translate_dict(
+                base_id, id
+              ), table[, base_id]
+            )
+          } else {
+            table[, id] <-
+              private$expr_data$get_annotation()$generate_translate_dict(
+                base_id, id
+              )[table[, base_id]]
+          }
+        }
       }
       if (verbose) {
         verbose_translate <- c(
@@ -336,11 +352,12 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
     extract_data_for_plot = function(use_padj = TRUE, lfc_abs_lim = 1,
       min_signif = 0.05, tag_id_select = "symbol", tag_id_show = "symbol",
       select_ids = NULL, select_batches = NULL, max_tags = 15,
-      in_batches = NULL, hard_select = FALSE
+      in_batches = NULL, hard_select = FALSE, safe_translate = TRUE
     ) {
       if (length(select_ids) > max_tags) {
         logging::logerror(
-          "number of tags in `select_ids` must be inferior to `max_tags`")
+          "number of tags in `select_ids` must be inferior to `max_tags`"
+        )
         stop()
       }
 
@@ -348,13 +365,14 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         logging::logwarn("`max_tags` > 15 is not ideal for visibility")
       }
 
-      known_tag_ids <- c("gid", "uniprot", "symbol")
+      known_tag_ids <- c("tgid", "gid", "uniprot", "symbol")
       tag_ids <- unique(c(tag_id_select, tag_id_show))
       if (length(setdiff(tag_ids, known_tag_ids)) != 0) {
         logging::logerror("args `tag_id*` are not recognized")
       }
       keep_vars <- c("batch", "group", "baseMean", "log2FoldChange", "status",
-        "lfcSE", "tag_id")
+        "lfcSE", "tag_id"
+      )
       if (use_padj) {
         keep_vars <- c(keep_vars, "padj")
         pval_name <- "padj"
@@ -367,15 +385,15 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         tidyr::unnest(cols = c("data")) %>%
         dplyr::ungroup() %>%
         dplyr::select(tidyselect::all_of(keep_vars)) %>%
-        dplyr::filter(.data$status != "outlier" &
-          .data$status != "undetected") %>%
-        dplyr::rename_with(function(x) ("pval"),
-          tidyselect::all_of(pval_name)) %>%
+        dplyr::filter(.data$status != "outlier" & .data$status != "undetected"
+        ) %>%
+        dplyr::rename_with(function(x) ("pval"), tidyselect::all_of(pval_name)
+        ) %>%
         dplyr::mutate(pval = dplyr::if_else(
           is.na(.data$pval),
           1,
-          .data$pval)
-        ) %>%
+          .data$pval
+        )) %>%
         dplyr::mutate(status = as.character(.data$status)) %>%
         dplyr::mutate(status = dplyr::if_else(
           .data$pval < min_signif &
@@ -397,17 +415,30 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       data$tag_id <- NULL
 
       for (id in tag_ids){
-        data[, id] <- private$expr_data$get_annotation()$generate_translate_dict(
-          base_id, id)[as.vector(data[, base_id])[[1]]]
+        if (safe_translate){
+          data[, id] <- safe_translate_ids(
+            private$expr_data$get_annotation(
+            )$generate_translate_dict(
+              base_id, id
+            ), as.vector(data[, base_id])[[1]]
+          )
+        } else {
+          data[, id] <- private$expr_data$get_annotation(
+          )$generate_translate_dict(
+            base_id, id
+          )[as.vector(data[, base_id])[[1]]]
+        }
       }
 
       data <- data %>%
         dplyr::rename_with(function(x) ("tag_id_select"),
-          tidyselect::all_of(tag_id_select))
+          tidyselect::all_of(tag_id_select)
+        )
       if (tag_id_select != tag_id_show) {
         data <- data %>%
           dplyr::rename_with(function(x) ("tag_id_show"),
-            tidyselect::all_of(tag_id_show))
+            tidyselect::all_of(tag_id_show)
+          )
       } else {
         data$tag_id_show <- data$tag_id_select
       }
@@ -420,10 +451,12 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
             paste(.data$status, "selected", sep = "_"),
             .data$status
           )) %>%
-        dplyr::arrange(.data$selected)
+          dplyr::arrange(.data$selected)
         if (hard_select & (length(select_ids) > 0)) {
-          data <- dplyr::filter(data,
-            .data[["selected"]])
+          data <- dplyr::filter(
+            data,
+            .data[["selected"]]
+          )
         }
       }
       if (! is.null(select_batches)) {
@@ -869,7 +902,6 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         dplyr::mutate(tag_value = dplyr::if_else(
           .data$tag_value < - max_abs_value, - max_abs_value, .data$tag_value))
 
-
       tag_x_group_wide <- data %>%
         dplyr::select(tidyselect::all_of(
           c("tag_id_show", "batch", "group", "tag_value")
@@ -925,7 +957,8 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       max_abs_value_plot = 5, cut_tree_k = NULL,
       show_selected_ids = FALSE, meth_tag_dist2 = "minkowski",
       meth_tag_value2 = "z", meth_tag_clust2 = "ward.D2",
-      max_abs_value_hclust2 = 100, ...) {
+      max_abs_value_hclust2 = 100, ...
+    ) {
 
       data <- self$extract_data_for_plot(...)
 

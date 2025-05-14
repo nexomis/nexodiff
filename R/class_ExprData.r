@@ -1249,6 +1249,29 @@ ExprData <- R6::R6Class("ExprData", # nolint
       row.names(results$design_table) <- results$design_table$sample
       results$design_table <- results$design_table[results$all_samples, ]
       results
+    },
+
+    #' @description
+    #' Clean version suffixes from expression tag IDs.
+    #'
+    #' This method applies the `remove_id_version_suffix` utility to the
+    #' row names of internal data matrices (`raw`, `len`, `intra_norm_fact`)
+    #' and to `selected_ids`.
+    #'
+    #' @param suffix_pattern (character) The regex pattern for the version
+    #'   suffix. Default is `"-\\d+$"`. If `NULL`, `FALSE`, or an empty string,
+    #'   no cleaning is performed.
+    clean_id_versions = function(suffix_pattern = "\\.\\d+$") {
+      rownames(private$raw) <-
+        remove_id_version_suffix(rownames(private$raw), suffix_pattern)
+      rownames(private$len) <-
+        remove_id_version_suffix(rownames(private$len), suffix_pattern)
+      rownames(private$intra_norm_fact) <-
+        remove_id_version_suffix(
+          rownames(private$intra_norm_fact), suffix_pattern
+        )
+      private$selected_ids <-
+        remove_id_version_suffix(private$selected_ids, suffix_pattern)
     }
   ),
   private = list(
@@ -1585,10 +1608,11 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
     #' of a fixed length like 3 prime or not
     #' @param log_level Level of logging (see logging package). Default = WARN
     #' @param format Format of files. Default=kallisto
+    #' @param suffix_pattern See clean_txid_versions method
     #' Default = txid
     #' @return A new `ExprDataTranscript` object.
     initialize = function(design, annotation, with_fixed_length = FALSE, log_level = "WARN",
-      format = "kallisto") {
+      format = "kallisto", suffix_pattern = "\\.\\d+$") {
       logging::basicConfig(log_level)
 
       private$design <- design
@@ -1674,6 +1698,7 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
 
       private$len[is.nan(private$len)] <- 1
 
+      self$clean_id_versions(suffix_pattern = suffix_pattern)
     }
   )
 )

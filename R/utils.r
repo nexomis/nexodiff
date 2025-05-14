@@ -320,3 +320,79 @@ get_counts_file_path <- function(src_dir, sample_name) {
     stop("No valid file found for sample: ", sample_name)
   }
 }
+
+#' Remove version suffixes from a vector of IDs
+#'
+#' @description
+#' This function takes a character vector of IDs and removes a specified suffix
+#' pattern. It also checks if removing the suffix results in new duplicate IDs
+#' that were not duplicates before the suffix removal.
+#'
+#' @param ids A character vector of identifiers.
+#' @param suffix_pattern A string representing the regular expression pattern
+#'   for the suffix to remove. Defaults to `"\\.\\d+$"` (a hyphen followed by one
+#'   or more digits at the end of the string). If `NULL` or `FALSE` or an empty
+#'   string, the original IDs are returned unmodified.
+#'
+#' @return A character vector of IDs with the specified suffixes removed.
+#'   Issues a warning if new duplicates are created from previously unique
+#'   suffixed IDs.
+#' @export
+#' @examples
+#' ids_to_clean <- c("ID-1", "ID-2.1", "ID-2.2", "ID-3", "ID-4.01", "ID-4.001")
+#' remove_id_version_suffix(ids_to_clean, suffix_pattern = "\\.\\d+$")
+#' # c("ID-1", "ID-2", "ID-2", "ID-3", "ID-4", "ID-4")
+#' # Warning: Removing ID version suffixes created new duplicate IDs...
+#'
+#' remove_id_version_suffix(ids_to_clean, suffix_pattern = "-\\d+$")
+#' # c("ID", "ID-2.1", "ID-2.2", "ID", "ID-4.01", "ID-4.001")
+#' # Warning: Removing ID version suffixes created new duplicate IDs...
+#'
+#' remove_id_version_suffix(c("TX.1", "TX.2", "TX.3"), suffix_pattern = NULL)
+#' # c("TX.1", "TX.2", "TX.3")
+remove_id_version_suffix <- function(ids, suffix_pattern = "\\.\\d+$") {
+  if (is.null(suffix_pattern) || suffix_pattern == FALSE || suffix_pattern == "") {
+    return(ids)
+  }
+
+  if (!is.character(ids)) {
+    logging::logerror("Input 'ids' must be a character vector.")
+    stop("Input 'ids' must be a character vector.")
+  }
+  if (length(ids) == 0) {
+    return(character(0))
+  }
+
+  original_ids <- ids
+  modified_ids <- stringr::str_remove(original_ids, suffix_pattern)
+
+  if (sum(duplicated(original_ids)) != sum(duplicated(modified_ids))) {
+    stop("Removing ID version suffixes created new duplicate IDs.")
+  }
+
+  return(modified_ids)
+}
+
+#' Safely translate IDs using a named vector
+#'
+#' Translates a vector of IDs using a named vector (dictionary). If an ID
+#' is not found in the named vector (resulting in NA), the original ID is
+#' kept.
+#'
+#' @param named_vector A named vector where names are the original IDs and
+#'   values are the translated IDs.
+#' @param vector_to_translate A character vector of IDs to translate.
+#' @return A character vector with translated IDs, preserving original IDs
+#'   where translation was not possible.
+#' @export
+#' @examples
+#' translation_map <- c("ID1" = "NewID1", "ID2" = "NewID2")
+#' ids_to_translate <- c("ID1", "ID3", "ID2")
+#' safe_translate_ids(translation_map, ids_to_translate)
+#' # Should return: c("NewID1", "ID3", "NewID2")
+safe_translate_ids <- function(named_vector, vector_to_translate) {
+  translated_ids <- named_vector[as.character(vector_to_translate)]
+  na_indices <- is.na(translated_ids)
+  translated_ids[na_indices] <- vector_to_translate[na_indices]
+  return(translated_ids)
+}

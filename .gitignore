@@ -60,3 +60,5 @@ test/out_dir
 /vignettes/example_files
 /vignettes/directory_with_annot
 /vignettes/GCF*
+/vignettes/*.xlsx
+

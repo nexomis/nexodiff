@@ -1,0 +1,457 @@
+---
+title: "Basic Example for using nexodiff"
+format:
+  html:
+    code-fold: show
+execute:
+  cache: true
+knitr:
+  opts_chunk:
+    collapse: true
+    message: false
+    warning: false
+    echo: true
+    fig.show: "asis"
+    R.options:
+      knitr.graphics.auto_pdf: true
+---
+
+This vignette provides a practical walkthrough of the core functionalities of
+the `nexodiff` package, guiding users through the essential steps of analyzing
+RNA-seq data. For detailed documentation on each class and method, please refer
+to the corresponding documentation.
+
+## Annotation
+
+The `Annotation` class is central to managing transcriptome annotation
+information. It stores mappings between various identifiers (like gene IDs,
+transcript IDs, protein IDs) and associated metadata (gene names, types,
+species, etc.).
+
+### Initialization
+
+You can initialize an `Annotation` object in several ways:
+
+1.  **From a GFF file (local or URL):** Provide the path or URL to a GFF file.
+The package will parse it.
+2.  **From a pre-processed directory:** If you have previously processed an
+annotation and saved it using `$write_to_directory()`, you can load it directly
+from that directory.
+
+```{r}
+#| label: annot_from_https
+#| eval: false
+# Example: Initializing from a GFF URL (NCBI)
+# This downloads and processes the GFF file.
+annot <- nexodiff::Annotation$new(
+  annotation = "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.gff.gz"
+)
+# Optionally, save the processed annotation to a directory for faster loading next time
+annot$write_to_directory("directory_with_annot")
+```
+
+```{r}
+#| label: annot
+# Example: Initializing from a pre-processed directory
+# This is faster if the annotation has been processed and saved before.
+annot <- nexodiff::Annotation$new(
+  annotation_dir = "directory_with_annot"
+)
+```
+
+### ID Mapping
+
+The `Annotation` object allows translating between different ID types.
+
+#### Generating Translation Dictionaries
+
+Use `$generate_translate_dict()` to create a named vector for quick lookups
+between two ID types.
+
+```{r}
+#| label: tx2gene
+# Example: Get a mapping from transcript ID (txid) to gene ID (gid)
+tx2gene <- annot$generate_translate_dict(
+  from = "txid",
+  to = "gid"
+)
+# Display the first few mappings
+print(tx2gene[1:2])
+```
+
+#### Discovering Available IDs
+
+You can query the object to see which ID types are available for translation.
+
+```{r}
+#| label: annot_methods
+# Get all possible 'from' ID types (keys for the dictionary)
+print(annot$get_from_ids())
+# Get all possible 'to' ID types (values) when starting 'from' txid
+print(annot$get_to_ids(from = "txid"))
+```
+
+### Exporting Annotation
+
+You can export the annotation data associated with a specific ID type into a
+data frame.
+
+```{r}
+#| label: annot_export
+# Example: Export all annotation associated with gene IDs (gid)
+df <- annot$export_to_df(from = "gid")
+knitr::kable(head(df))
+```
+
+Refer to the `Annotation.Rd` documentation for more details on ID types and
+methods.
+
+## Pairwise Design
+
+The `PairwiseDesign` class manages the experimental design metadata. It
+organizes samples into groups and batches, defining control groups for
+pairwise comparisons.
+
+### Initialization
+
+Initialize the `PairwiseDesign` object using a design file (CSV or YML format).
+For CSV files, you often need to specify the source directory (`src_dir`)
+containing the expression files.
+
+```{r}
+#| label: design
+# Example: Initializing from a CSV design file and specifying 
+# the source directory
+design <- nexodiff::PairwiseDesign$new(
+  "../tests/ena_datasets/ERX1492351_design.csv",
+  src_dir = "../tests/ena_datasets/ERX1492351_out/kallisto/"
+)
+```
+
+### Building File Paths
+
+After initialization, use `$build_file_paths()` to construct the full paths to
+the expression data files for each sample based on the design and `src_dir`.
+
+```{r}
+#| label: build_file_paths
+# This read the file paths within the design object
+design$build_file_paths()
+```
+
+Refer to `PairwiseDesign` documentation for details on file formats and methods.
+
+## Import Expression Data
+
+Expression data is handled by `ExprData` subclasses. `ExprDataTranscript` specifically manages transcript-level expression data.
+
+### Initialization (`ExprDataTranscript`)
+
+Create an `ExprDataTranscript` object by providing the `PairwiseDesign` and `Annotation` objects. It reads the expression files (e.g., Kallisto output) specified in the design.
+
+```{r}
+#| label: expr_tx
+# Example: Creating a transcript-level expression data object
+expr_tx = nexodiff::ExprDataTranscript$new(
+  design = design,
+  annotation = annot,
+  with_fixed_length = TRUE,  # Specify if library prep has fixed length 
+                             # (e.g., 3' sequencing)
+  format = "kallisto"   # Specify the format of input files
+)
+```
+
+## Basic Metrics
+
+The `ExprData` object provides methods to summarize the loaded data.
+
+### Summarizing Expression Tags
+
+Use `$show_etags_summary()` to get a count summary of expression tags (transcripts in this case) based on annotation features like RNA type or species.
+
+```{r}
+#| label: expr_tx_metrics
+# Show summary based on annotation (e.g., counts per RNA type, per species)
+expr_tx$show_etags_summary()
+```
+
+
+### Plot Summary per Type
+
+Use `$plot_sum_per_type_per_sample()` to plot the summary of expression tags.
+
+```{r}
+#| label: expr_tx_plot
+# Plot summary based on annotation (e.g., counts per RNA type, per species)
+expr_tx$plot_sum_per_type_per_sample()
+```
+
+## Filtering
+
+You can filter the expression data based on annotation criteria.
+
+### Filtering by Annotation
+
+Use `$filter_and_set_selected_ids()` to keep or exclude expression tags based on their annotation (e.g., keep only mRNAs from a specific species). Filters are applied sequentially (intersecting results). Use `$reset()` to clear filters.
+
+```{r}
+#| label: expr_tx_filter
+# Example: Keep only 'mRNA' type transcripts
+expr_tx$filter_and_set_selected_ids("mRNA", "type")
+# Example: Keep only 'Homo sapiens' transcripts (assuming this is the species)
+expr_tx$filter_and_set_selected_ids("Homo sapiens", "tax_name")
+# Show summary again to see the effect of filtering
+expr_tx$show_etags_summary()
+```
+
+Refer to `ExprData` for more filtering options and other methods.
+
+## Summarize at the Gene Level
+
+Often, analysis is performed at the gene level. `ExprDataGene` aggregates transcript-level data.
+
+### Initialization (`ExprDataGene`)
+
+Create an `ExprDataGene` object from an `ExprDataTranscript` object. It sums transcript counts to the gene level and calculates weighted average lengths.
+
+```{r}
+#| label: expr_gene
+# Example: Creating a gene-level expression data object from the transcript-level one
+expr_gene <- nexodiff::ExprDataGene$new(expr_tx)
+# Show summary at the gene level
+expr_gene$show_etags_summary()
+```
+
+## Normalization
+
+Normalization adjusts raw counts for sequencing depth and other factors. `nexodiff` supports both intra-sample and inter-sample normalization.
+
+### Intra-sample Normalization
+
+This adjusts for factors like transcript length within a single sample. Common methods include TPM, FPKM, etc.
+
+```{r}
+#| label: expr_intra_norm
+# Example: Apply TPM normalization (Transcript Per Million)
+# This calculates and stores the intra-normalization factors internally
+expr_gene$compute_and_set_intra_norm_fact(method = "tpm") 
+# Note: Use expr_tx for transcript-level normalization if needed before gene summary
+```
+
+### Inter-sample Normalization
+
+This adjusts for differences in library size or composition between samples, making them comparable. Methods like Median Ratio or TMM are common.
+
+```{r}
+#| label: expr_inter_norm
+# Example: Apply Median Ratio normalization across groups within batches
+# This calculates and stores the inter-normalization factors internally
+expr_gene$compute_and_set_inter_norm_fact(
+  method = "median", 
+  norm_scale = "batch"
+) 
+```
+
+Refer to `ExprData` documentation for details on normalization methods and options.
+
+## Quality Control Plots
+
+Visualizing the data is crucial for quality control. `ExprData` provides several plotting functions.
+
+### Sample Distributions
+
+Plot the distribution of expression values (raw or normalized) for each sample.
+
+::: {.panel-tabset}
+
+#### Raw
+```{r}
+#| label: plot_dist_raw
+# Example: Boxplot of log2(TPM + 2) expression values per sample
+expr_gene$plot_dist_per_sample(
+  intra_norm = FALSE, 
+  inter_norm = FALSE, 
+  log2_expr = TRUE, 
+  geoms = "boxplot"
+)
+```
+
+#### Norm
+```{r}
+#| label: plot_dist_norm
+# Example: Boxplot of log2(TPM + 2) expression values per sample
+# Applies intra (TPM set above) and inter (Median Ratio set above) normalization
+expr_gene$plot_dist_per_sample(
+  intra_norm = TRUE, 
+  inter_norm = TRUE, 
+  log2_expr = TRUE, 
+  geoms = "boxplot"
+)
+```
+
+:::
+
+### Principal Component Analysis (PCA)
+
+PCA helps visualize the main sources of variation in the data and identify sample clustering or outliers.
+
+```{r}
+#| label: plot_pca
+# Example: PCA plot using log2(normalized counts + 2)
+# Colors points by 'group' from the design file
+expr_gene$plot_prcomp(
+  plot_scale = "batch",
+)
+```
+
+### Correlation Heatmap
+
+Assess sample-to-sample similarity using correlation.
+
+```{r}
+#| label: plot_corr
+# Example: Correlation heatmap of samples based on log2(normalized counts + 2)
+expr_gene$plot_corr(
+  intra_norm = TRUE, 
+  inter_norm = TRUE, 
+  tr_fn = function(x) log2(x + 2)
+)
+```
+
+Refer to `ExprData` documentation for more plotting options and customizations.
+
+## Differential Expression Analysis
+
+The core analysis involves identifying differentially expressed genes/transcripts between conditions. `nexodiff` provides several classes for this, inheriting from `PairwiseComp`.
+
+### Using DESeq2 (`PairwiseDESeq2`)
+
+Integrates the popular DESeq2 method for differential expression analysis.
+
+```{r}
+#| label: de_deseq2
+# Example: Perform DESeq2 analysis on the gene-level data
+# Assumes expr_gene has appropriate normalization factors set or uses DESeq2's internal normalization
+pairwise_deseq2 <- nexodiff::PairwiseDESeq2$new(
+  expr_data = expr_gene, 
+  ncpus = 2 # Specify number of CPUs if desired
+)
+
+# Explore results (example: get results table for a specific comparison)
+# results_df <- pairwise_deseq2$filter_and_get_results(in_batch = "batch1", in_group = "groupA")
+# pairwise_deseq2$plot_vulcano(in_batch = "batch1", in_group = "groupA") 
+```
+
+## Exploring Differential Expression Results
+
+Once you have run a differential expression analysis (e.g., using `PairwiseDESeq2`), you can explore the results in various ways. The following examples use the `pairwise_deseq2` object created earlier.
+
+### Getting Results Tables
+
+Use `$filter_and_get_results()` to extract the results table for specific comparisons, optionally adding annotation columns.
+
+```{r}
+#| label: de_results_table
+# Example: Get DESeq2 results for group 'groupA' in batch 'batch1' 
+# (replace with actual group/batch names from your design)
+# Add gene symbol and protein names to the table
+results_df <- pairwise_deseq2$filter_and_get_results(
+   in_batch = "batch1",
+   in_group = "test",
+   add_ids = c("symbol", "protein_names") 
+ )
+knitr::kable(head(results_df))
+```
+
+### Summarizing Results
+
+Generate a summary table counting the number of differentially expressed genes based on different criteria (LFC, p-value).
+
+```{r}
+#| label: de_summary
+# Example: Generate a summary of deregulated genes using different thresholds
+summary_df <- pairwise_deseq2$generate_summary(
+   cross_lfc_abs_lim = c(log2(1.5), 1), # LFC thresholds log2(1.5) and 1
+   cross_min_signif = c(0.05, 0.01),    # Adjusted p-value thresholds 0.05 and 0.01
+   use_padj = TRUE                      # Use adjusted p-value
+ )
+knitr::kable(summary_df)
+
+# You can also plot this summary
+pairwise_deseq2$plot_summary(
+  cross_lfc_abs_lim = c(log2(1.5), 1), 
+  cross_min_signif = c(0.05, 0.01),    
+  use_padj = TRUE                    
+)
+```
+
+### Plotting Results
+
+Visualize the results using standard plots.
+
+#### MA Plot
+
+Shows log2 fold change versus mean normalized counts. Useful for visualizing magnitude of change and identifying potential biases.
+
+```{r}
+#| label: plot_ma
+# Example: MA plot for a specific comparison
+pairwise_deseq2$plot_ma(
+  lfc_abs_lim = 1,      # LFC threshold for coloring
+  min_signif = 0.05,    # Significance threshold for coloring
+  use_padj = TRUE
+)
+```
+
+#### Volcano Plot
+
+Plots statistical significance (-log10 p-value) versus log2 fold change. Helps identify statistically significant genes with large magnitude changes.
+
+```{r}
+#| label: plot_volcano
+# Example: Volcano plot for a specific comparison
+pairwise_deseq2$plot_vulcano(
+  lfc_abs_lim = 1,      # LFC threshold for coloring/lines
+  min_signif = 0.05,    # Significance threshold for coloring/lines
+  use_padj = TRUE,
+)
+```
+
+#### Heatmap
+
+Visualize the expression patterns of selected genes across samples.
+
+```{r}
+#| label: plot_heatmap
+# Example: Heatmap of top differentially expressed genes
+
+pairwise_deseq2$plot_heatmap(
+  lfc_abs_lim = 1,
+  min_signif = 0.05,
+  use_padj = TRUE,
+  select_ids = pairwise_deseq2$generate_a_list(in_batch = "batch1", in_group ="test", id = "tgid")[1:50],
+  tag_id_select = "tgid",
+  tag_id_show = "symbol",
+  max_tags = 500,
+  hard_select = TRUE
+)
+
+```
+
+Refer to `PairwiseComp` documentation for many more plotting options and customizations.
+
+## Exporting Results
+
+You can easily export the differential expression results to an Excel file, with each sheet representing a comparison (group within a batch).
+
+```{r}
+#| label: export_xlsx
+#| eval: false
+# Example: Write results for all comparisons to an Excel file
+pairwise_deseq2$write_to_xlsx(
+  output_folder = ".", # Save in the current directory
+  file_suffix = "_deseq2_results.xlsx"
+)
+```
+
+This concludes the basic workflow using `nexodiff`. Explore the detailed documentation for each class to understand all available parameters and advanced features.
