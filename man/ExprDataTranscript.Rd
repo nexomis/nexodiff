@@ -19,6 +19,7 @@ Extension of expression dataset at transcript-level
 \if{html}{\out{
 <details><summary>Inherited methods</summary>
 <ul>
+<li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="clean_id_versions"><a href='../../nexodiff/html/ExprData.html#method-ExprData-clean_id_versions'><code>nexodiff::ExprData$clean_id_versions()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="compute_and_set_inter_norm_fact"><a href='../../nexodiff/html/ExprData.html#method-ExprData-compute_and_set_inter_norm_fact'><code>nexodiff::ExprData$compute_and_set_inter_norm_fact()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="compute_and_set_intra_norm_fact"><a href='../../nexodiff/html/ExprData.html#method-ExprData-compute_and_set_intra_norm_fact'><code>nexodiff::ExprData$compute_and_set_intra_norm_fact()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="compute_norm"><a href='../../nexodiff/html/ExprData.html#method-ExprData-compute_norm'><code>nexodiff::ExprData$compute_norm()</code></a></span></li>
@@ -58,7 +59,8 @@ Initialize \code{ExprDataTranscript} object
   annotation,
   with_fixed_length = FALSE,
   log_level = "WARN",
-  format = "kallisto"
+  format = "kallisto",
+  suffix_pattern = "\\\\.\\\\d+$"
 )}\if{html}{\out{</div>}}
 }
 
@@ -74,7 +76,9 @@ of a fixed length like 3 prime or not}
 
 \item{\code{log_level}}{Level of logging (see logging package). Default = WARN}
 
-\item{\code{format}}{Format of files. Default=kallisto
+\item{\code{format}}{Format of files. Default=kallisto}
+
+\item{\code{suffix_pattern}}{See clean_txid_versions method
 Default = txid}
 }
 \if{html}{\out{</div>}}

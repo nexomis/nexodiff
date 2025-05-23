@@ -7,7 +7,7 @@
 ^_pkgdown\.yml$     # Configuration info for the package website
 ^\.github$          # Contributing guidelines, CoC, issue templates, etc.
 ^.*\.RData$         # Designates Rdata image
-^.*\.Rhistory		# Designates R history file
+^.*\.Rhistory		    # Designates R history file
 ^.devcontainer      # Remote container configuration
 ^test_cache
 ^test_files
@@ -23,3 +23,4 @@
 ^Meta
 ^doc$
 ^Meta$
+^_old_tests$

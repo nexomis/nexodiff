@@ -1,0 +1,22 @@
+##gff-version 3
+chr1	test	region	1	100	.	+	.	taxon:12345
+chr1	test	gene	1	100	.	+	.	ID=gene1;gene=test_gene1;gbkey=gene;Dbxref=GeneID:1
+chr1	test	mRNA	1	100	.	+	.	ID=mRNA1_1;Parent=gene1;Dbxref=GeneID:1,GenBank:NM_001_1;gene=test_gene1;gbkey=mRNA
+chr1	test	mRNA	1	100	.	+	.	ID=mRNA1_2;Parent=gene1;Dbxref=GeneID:1,GenBank:NM_001_2;gene=test_gene1;gbkey=mRNA
+chr1	test	mRNA	1	100	.	+	.	ID=mRNA1_3;Parent=gene1;Dbxref=GeneID:1,GenBank:NM_001_3;gene=test_gene1;gbkey=mRNA
+chr1	test	mRNA	1	100	.	+	.	ID=mRNA1_4;Parent=gene1;Dbxref=GeneID:1,GenBank:NM_001_4;gene=test_gene1;gbkey=mRNA
+chr1	test	mRNA	1	100	.	+	.	ID=mRNA1_5;Parent=gene1;Dbxref=GeneID:1,GenBank:NM_001_5;gene=test_gene1;gbkey=mRNA
+chr2	test	region	1	500	.	+	.	taxon:12345
+chr2	test	gene	201	300	.	+	.	ID=gene2;gene=test_gene2;gbkey=gene;Dbxref=GeneID:2
+chr2	test	transcript	201	300	.	+	.	ID=mRNA2_1;Parent=gene2;Dbxref=GeneID:2,GenBank:NM_002_1;gene=test_gene2
+chr2	test	transcript	201	300	.	+	.	ID=mRNA2_2;Parent=gene2;Dbxref=GeneID:2,GenBank:NM_002_2;gene=test_gene2
+chr2	test	transcript	201	300	.	+	.	ID=mRNA2_3;Parent=gene2;Dbxref=GeneID:2,GenBank:NM_002_3;gene=test_gene2
+chr2	test	transcript	201	300	.	+	.	ID=mRNA2_4;Parent=gene2;Dbxref=GeneID:2,GenBank:NM_002_4;gene=test_gene2
+chr2	test	transcript	201	300	.	+	.	ID=mRNA2_5;Parent=gene2;Dbxref=GeneID:2,GenBank:NM_002_5;gene=test_gene2
+chr3	test	region	1	1000	.	+	.	taxon:12345
+chr3	test	gene	301	400	.	+	.	ID=gene3;gene=test_gene3;gbkey=gene;Dbxref=GeneID:3
+chr3	test	mRNA	301	400	.	+	.	ID=mRNA3_1;Parent=gene3;Dbxref=GeneID:3;gene=test_gene3;gbkey=mRNA
+chr3	test	mRNA	301	400	.	+	.	ID=mRNA3_2;Parent=gene3;Dbxref=GeneID:3;gene=test_gene3;gbkey=mRNA
+chr3	test	mRNA	301	400	.	+	.	ID=mRNA3_3;Parent=gene3;Dbxref=GeneID:3;gene=test_gene3;gbkey=mRNA
+chr3	test	mRNA	301	400	.	+	.	ID=mRNA3_4;Parent=gene3;Dbxref=GeneID:3;gene=test_gene3;gbkey=mRNA
+chr3	test	mRNA	301	400	.	+	.	ID=mRNA3_5;Parent=gene3;Dbxref=GeneID:3;gene=test_gene3;gbkey=mRNA

@@ -62,3 +62,12 @@ test/out_dir
 /vignettes/GCF*
 /vignettes/*.xlsx
 
+/_old_tests
+/_trash
+/.clinerules
+/coverage_report.html
+
+/*refactor.md
+
+*gcda
+*gcno

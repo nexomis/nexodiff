@@ -15,18 +15,16 @@
 #' @export
 fetch_id_mapping <- function(tax_id) {
   url <- paste0(
-    "https://rest.uniprot.org/uniprotkb/stream?compressed=true&",
-    "fields=accession%2Creviewed%2Cprotein_name%2Cgene_names%2Cxref_geneid%",
-    "2Cannotation_score&format=tsv&query=(*)+AND+(model_organism%3A", tax_id, ")",  sep = "")
-  logging::logdebug(paste("curl -sS '", url, "' | gunzip -c", sep = ""))
+    "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accessio",
+    "n%2Creviewed%2Cprotein_name%2Cgene_names%2Cxref_geneid%2Cannotation_score",
+    "&format=tsv&query=(*)+AND+(model_organism%3A", tax_id, ")",  sep = ""
+  )
   id_mapping <- data.table::fread(
-    cmd = paste("curl -sS '", url, "' | gunzip -c", sep = ""),
+    url,
     sep = "\t",
     header = TRUE,
     fill = TRUE,
     stringsAsFactors = FALSE
   )
-  logging::logdebug("Finished fetching id_mapping table")
-  # Return the id_mapping table
   return(id_mapping)
 }

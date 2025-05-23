@@ -1,9 +1,28 @@
 Package: nexodiff
 Type: Package
-Title: Nexomis package to establish RNA-seq differential signatures
+Title: RNA-seq Differential Expression Analysis
 Version: 1.0.0
-Author: Julien FOURET <jfouret@nexomis.io>
-biocViews:
+Date: 2025-05-23
+Authors@R: c(
+    person("Julien", "FOURET", 
+           email = "jfouret@nexomis.io", 
+           role = c("aut", "cre")),
+    person("Abdelghafar", "Goumaidi", 
+           role = "aut"),
+    person("Catalina", "Gonzalez Gomez", 
+           role = "aut")
+    )
+Description: Provides classes and functions for performing differential 
+    expression analysis on RNA-seq data. The package implements various 
+    statistical methods and visualization tools for analyzing gene expression 
+    differences between experimental conditions.
+License: Apache-2.0
+URL: https://github.com/nexomis/nexodiff
+BugReports: https://github.com/nexomis/nexodiff/issues
+Encoding: UTF-8
+LazyData: true
+Depends: 
+    R (>= 4.0)
 Imports: 
     apeglm,
     circlize,
@@ -48,21 +67,24 @@ Imports:
     tidyselect,
     tools,
     yaml
-Maintainer: Julien FOURET <jfouret@nexomis.io>
-Description: This package provide different function to perform differential 
-    analysis.
-License: Apache-2.0
-Encoding: UTF-8
-LazyData: true
 Suggests: 
-    testthat (>= 3.0.0), knitr, rmarkdown, igraph, mathjaxr
-VignetteBuilder: knitr, rmarkdown
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    quarto,
+    igraph,
+    mathjaxr,
+    roxygen2,
+    devtools,
+    covr
+LinkingTo: Rcpp
+VignetteBuilder: quarto
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
-LinkingTo: Rcpp
+RoxygenNote: 7.3.2
 Collate:
     'RcppExports.R'
-    'nexodiff.r'
+    'nexodiff-package.R'
     'utils.r'
     'class_Annotation.r'
     'class_PairwiseDesign.r'
@@ -74,6 +96,3 @@ Collate:
     'class_RstanAnalysis.r'
     'fetch_id_mapping.r'
     'parse_gff_to_annotation.r'
-Depends: 
-    R (>= 4.0)
-RoxygenNote: 7.3.2

@@ -64,6 +64,7 @@ show_etags_summary("raw")
 \item \href{#method-ExprData-plot_prcomp}{\code{ExprData$plot_prcomp()}}
 \item \href{#method-ExprData-plot_corr}{\code{ExprData$plot_corr()}}
 \item \href{#method-ExprData-extract_pairwise_data_with_design}{\code{ExprData$extract_pairwise_data_with_design()}}
+\item \href{#method-ExprData-clean_id_versions}{\code{ExprData$clean_id_versions()}}
 \item \href{#method-ExprData-clone}{\code{ExprData$clone()}}
 }
 }
@@ -1026,6 +1027,29 @@ specified as column names
 \item "design_table" : design table only for those samples
 \item "ctrl_group" : the control group
 }
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ExprData-clean_id_versions"></a>}}
+\if{latex}{\out{\hypertarget{method-ExprData-clean_id_versions}{}}}
+\subsection{Method \code{clean_id_versions()}}{
+Clean version suffixes from expression tag IDs.
+
+This method applies the \code{remove_id_version_suffix} utility to the
+row names of internal data matrices (\code{raw}, \code{len}, \code{intra_norm_fact})
+and to \code{selected_ids}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ExprData$clean_id_versions(suffix_pattern = "\\\\.\\\\d+$")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{suffix_pattern}}{(character) The regex pattern for the version
+suffix. Default is \code{"-\\\\d+$"}. If \code{NULL}, \code{FALSE}, or an empty string,
+no cleaning is performed.}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}

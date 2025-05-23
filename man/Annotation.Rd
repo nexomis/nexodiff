@@ -27,6 +27,7 @@ vignette defining file formats.
 \item \href{#method-Annotation-get_to_ids}{\code{Annotation$get_to_ids()}}
 \item \href{#method-Annotation-export_to_df}{\code{Annotation$export_to_df()}}
 \item \href{#method-Annotation-write_to_directory}{\code{Annotation$write_to_directory()}}
+\item \href{#method-Annotation-clean_txid_versions}{\code{Annotation$clean_txid_versions()}}
 \item \href{#method-Annotation-clone}{\code{Annotation$clone()}}
 }
 }
@@ -43,7 +44,9 @@ This method initializes a new \code{Annotation} object.
   format_gff = TRUE,
   idmapping = NULL,
   annotation_dir = NULL,
-  log_level = "WARN"
+  log_level = "WARN",
+  suffix_pattern = "\\\\.\\\\d+$",
+  gff_type_filter = c(".*RNA", ".*transcript")
 )}\if{html}{\out{</div>}}
 }
 
@@ -64,6 +67,12 @@ downloaded from uniprot using taxon ID from annotation file.}
 takes precedence over \code{annotation} and \code{idmapping}.}
 
 \item{\code{log_level}}{Logging level, e.g., "INFO", "WARN", "DEBUG".}
+
+\item{\code{suffix_pattern}}{The regex pattern used see clean_txid_versions
+method.}
+
+\item{\code{gff_type_filter}}{Vector of regex patterns to filter the type column
+(3rd column of GFF)}
 }
 \if{html}{\out{</div>}}
 }
@@ -224,6 +233,31 @@ will be written. The directory will be created if it does not exist.}
 \subsection{Returns}{
 Invisibly returns TRUE if successful, or FALSE/throws error on failure.
 Logs information about files written or warnings for types with no data.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Annotation-clean_txid_versions"></a>}}
+\if{latex}{\out{\hypertarget{method-Annotation-clean_txid_versions}{}}}
+\subsection{Method \code{clean_txid_versions()}}{
+Clean version suffixes from transcript IDs within the internal annotation
+structures.
+
+This method iterates through the \code{private$annotations} object.
+If a \code{from_key} (names of a mapping) is "txid", it cleans these names.
+If a \code{to_key} (values of a mapping) is "txid", it cleans these values.
+It uses the \code{remove_id_version_suffix} utility function.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Annotation$clean_txid_versions(suffix_pattern = "\\\\.\\\\d+$")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{suffix_pattern}}{(character) The regex pattern for the version
+suffix. Default is \code{"\\\\.\\\\d+$"}. If \code{NULL}, \code{FALSE}, or an empty
+string, no cleaning is performed.}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}

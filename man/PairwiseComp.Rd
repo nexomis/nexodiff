@@ -88,7 +88,8 @@ ID.
   in_batch,
   in_group,
   verbose = FALSE,
-  add_ids = c("gid", "symbol", "uniprot", "protein_names", "type", "tax_name")
+  add_ids = c("gid", "symbol", "uniprot", "protein_names", "type", "tax_name"),
+  safe_translate = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -108,6 +109,9 @@ meaningful names}
 \code{generate_translate_dict} from class \link{Annotation}
 Available options are: "gid", "symbol", "uniprot", "protein_names",
 "type", and "tax_name"}
+
+\item{\code{safe_translate}}{If TRUE, the function will keep original ids
+if the translation fails}
 }
 \if{html}{\out{</div>}}
 }
@@ -288,7 +292,8 @@ Return data for plots
   select_batches = NULL,
   max_tags = 15,
   in_batches = NULL,
-  hard_select = FALSE
+  hard_select = FALSE,
+  safe_translate = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -316,6 +321,9 @@ Return data for plots
 \item{\code{in_batches}}{vector of batches code to keep (default all)}
 
 \item{\code{hard_select}}{whether to remove unselected data}
+
+\item{\code{safe_translate}}{If TRUE, the function will keep original ids
+if the translation fails}
 }
 \if{html}{\out{</div>}}
 }

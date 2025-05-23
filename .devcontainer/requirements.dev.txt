@@ -1,5 +1,7 @@
 languageserver
 roxygen2
 testthat
+remotes
+covr
 vdiffr
 devtools

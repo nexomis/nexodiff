@@ -19,6 +19,7 @@ Extension of expression dataset at gene-level.
 \if{html}{\out{
 <details><summary>Inherited methods</summary>
 <ul>
+<li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="clean_id_versions"><a href='../../nexodiff/html/ExprData.html#method-ExprData-clean_id_versions'><code>nexodiff::ExprData$clean_id_versions()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="compute_and_set_inter_norm_fact"><a href='../../nexodiff/html/ExprData.html#method-ExprData-compute_and_set_inter_norm_fact'><code>nexodiff::ExprData$compute_and_set_inter_norm_fact()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="compute_and_set_intra_norm_fact"><a href='../../nexodiff/html/ExprData.html#method-ExprData-compute_and_set_intra_norm_fact'><code>nexodiff::ExprData$compute_and_set_intra_norm_fact()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="compute_norm"><a href='../../nexodiff/html/ExprData.html#method-ExprData-compute_norm'><code>nexodiff::ExprData$compute_norm()</code></a></span></li>
