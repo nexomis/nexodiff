@@ -1,8 +1,6 @@
 library(testthat)
 # Assuming nexodiff is loaded
 
-context("Annotation Class Integration Tests - HTTPS")
-
 test_that("Annotation object can be initialized from a live NCBI GFF URL", {
   skip_on_cran()
   skip_if_offline(host = "ftp.ncbi.nlm.nih.gov")

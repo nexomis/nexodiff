@@ -1,7 +1,5 @@
 library(testthat)
 
-context("Annotation Class Unit Tests")
-
 test_that("Annotation object can be initialized from a local GFF file", {
   gff_file_path <- "fixtures/unit/dummy.gff"
 

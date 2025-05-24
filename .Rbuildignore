@@ -9,18 +9,9 @@
 ^.*\.RData$         # Designates Rdata image
 ^.*\.Rhistory		    # Designates R history file
 ^.devcontainer      # Remote container configuration
-^test_cache
-^test_files
-^test
-^tests/testthat/out_dir.*
-^examples
-^test.rmd
+^_old_tests
+^_trash
+^test\.rmd$
 ^.gitignore
-^compute_ssh
-^\.ci
-^\.gitlab-ci.yml
 ^doc
 ^Meta
-^doc$
-^Meta$
-^_old_tests$
