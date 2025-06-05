@@ -71,3 +71,5 @@ test/out_dir
 
 *gcda
 *gcno
+
+/tests/testthat/fixtures/integration/ena_datasets/ERX1492351_out
