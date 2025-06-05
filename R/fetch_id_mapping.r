@@ -31,9 +31,9 @@ fetch_id_mapping <- function(tax_id, quiet = FALSE) {
         url = url,
         destfile = uniprot_data,
         method = "auto",
-        timeout = 300,  # 5 minutes timeout
+        timeout = 1200,
         mode = "wb",
-        quiet = quiet   # Show progress
+        quiet = quiet
       )
       
       # Read the downloaded file
