@@ -405,20 +405,41 @@ PairwiseDesign <- R6::R6Class( # nolint
     # return None
     initialize_pairwise_design_csv = function(pairwise_design_file) {
 
-      # Read in the CSV file using readr's read_csv function
-      pairwise_design <- read.delim(pairwise_design_file, sep = ";")
-
-      # Convert some columns to character
-      for (str_col in c("batch", "group", "sample")) {
-        pairwise_design[, str_col] <- as.character(pairwise_design[, str_col])
-      }
-
       # Define mandatory fields for pairwise design CSV file
       mandatory_fields <- c("batch", "group", "ctrl", "sample")
+
+      # Read in the CSV file using readr's read_csv function
+      # try french way and then UK/US way
+      pairwise_design <- NULL
+      tryCatch(
+        {
+          pairwise_design <- read.delim(
+            pairwise_design_file,
+            sep = ";",
+            dec = ","
+          )
+          if (!all(mandatory_fields %in% names(pairwise_design))) {
+            stop()
+          }
+        },
+        error = function(e) {
+          pairwise_design <<- read.delim(
+            pairwise_design_file,
+            sep = ",",
+            dec = "."
+          )
+        }
+
+      )
 
       if (!all(mandatory_fields %in% names(pairwise_design))) {
         logging::logerror("CSV mandatory fields are not present")
         stop()
+      }
+
+      # Convert some columns to character
+      for (str_col in c("batch", "group", "sample")) {
+        pairwise_design[, str_col] <- as.character(pairwise_design[, str_col])
       }
 
       # Add default values for g_label and b_label if they are not present
