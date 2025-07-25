@@ -1319,7 +1319,8 @@ ExprData <- R6::R6Class("ExprData", # nolint
       } else if (plot_type == "hclust") {
         if (is.null(dim_reduce)) {
           d <- philentropy::distance(
-            t(in_data), method = dist_method, as.dist.obj = TRUE
+            t(in_data), method = dist_method, as.dist.obj = TRUE,
+            use.row.names = TRUE
           )
         } else {
           prcomp_args$x <- t(in_data)
@@ -1327,7 +1328,8 @@ ExprData <- R6::R6Class("ExprData", # nolint
           pca_res <- do.call(prcomp, prcomp_args)
           str(pca_res)
           d <- philentropy::distance(
-            pca_res$x, method = dist_method, as.dist.obj = TRUE
+            pca_res$x, method = dist_method, as.dist.obj = TRUE,
+            use.row.names = TRUE
           )
         }
         hc <- hclust(d, hclust_method)
