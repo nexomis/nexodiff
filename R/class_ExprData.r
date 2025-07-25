@@ -65,7 +65,8 @@ NULL
 #' can be used.
 #' @param include_ctrl_at_group_scale whether to include the controls at
 #' group scale
-#' @param dist_method distand method, see dist function
+#' @param dist_method distance method, see philentropy::distance function 
+#' for available methods
 #' @param hclust_method hierarchical clustering method (see hclust function)
 #' @param dim_reduce reduction before clustering (not yet implemented)
 #' @param clust_bar_var list of variable to include as legend as a color bar
@@ -902,13 +903,11 @@ ExprData <- R6::R6Class("ExprData", # nolint
 
     #' @description
     #' Function to draw complex plots
-    #' @param color_palettes name of the palette of color to use for plot in the
-    #' order of variable added.
+    #' @param color_palette name of the palette of color to use
     #' @return ggplot2 graph
     plot_complex = function(plot_type, in_batch = NULL, in_group = NULL,
       intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
-      plot_scale = "group", ggplot_mod = NULL, color_palettes = c("Set1",
-      "Set2", "Set3", "Pastel1", "Pastel2", "Paired", "Dark2", "Accent"),
+      plot_scale = "group", ggplot_mod = NULL, color_palette = "BrBg",
       prcomp_args = list(), prcomp_autoplot_args = list(),
       dist_method = "euclidean", hclust_method = "ward.D2", dim_reduce = NULL,
       clust_bar_var = c(), height_main = 10, width_main = 4,
@@ -949,7 +948,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
         clust_bar_var = clust_bar_var,
         height_main = height_main,
         width_main = width_main,
-        color_palettes = color_palettes
+        color_palette = color_palette
       )
 
       tr_fn_df <- function(df) {
@@ -1123,57 +1122,6 @@ ExprData <- R6::R6Class("ExprData", # nolint
     },
 
     #' @description
-    #' plot principal components
-    plot_prcomp = function(in_batch = NULL, in_group = NULL,
-      intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
-      plot_scale = "group", ggplot_mod = NULL,
-      prcomp_args = list(), prcomp_autoplot_args = list(),
-      include_ctrl_at_group_scale = FALSE,
-      tags = NULL, tag_type = NULL, df_design_filter = NULL) {
-
-      self$plot_complex(
-        "prcomp",
-        in_batch = in_batch,
-        in_group = in_group,
-        intra_norm = intra_norm,
-        inter_norm = inter_norm,
-        tr_fn = tr_fn,
-        plot_scale = plot_scale,
-        ggplot_mod = ggplot_mod,
-        prcomp_args = prcomp_args,
-        prcomp_autoplot_args = prcomp_autoplot_args,
-        include_ctrl_at_group_scale = include_ctrl_at_group_scale,
-        tags = tags,
-        tag_type = tag_type,
-        df_design_filter = df_design_filter
-      )
-    },
-
-    #' @description
-    #' plot correlations
-    plot_corr = function(in_batch = NULL, in_group = NULL,
-      intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
-      plot_scale = "group", ggplot_mod = NULL,
-      include_ctrl_at_group_scale = FALSE,
-      tags = NULL, tag_type = NULL, df_design_filter = NULL) {
-
-      self$plot_complex(
-        "corr",
-        in_batch = in_batch,
-        in_group = in_group,
-        intra_norm = intra_norm,
-        inter_norm = inter_norm,
-        tr_fn = tr_fn,
-        plot_scale = plot_scale,
-        ggplot_mod = ggplot_mod,
-        include_ctrl_at_group_scale = include_ctrl_at_group_scale,
-        tags = tags,
-        tag_type = tag_type,
-        df_design_filter = df_design_filter
-      )
-    },
-
-    #' @description
     #' Get formatted data for a group with its matching control within a batch
     #' @return list with selected attributes:
     #' - "raw" : matrix of raw values for test and control samples specified as
@@ -1305,7 +1253,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
     main_etag = NULL,
     make_plot_complex = function(in_data, in_title, plot_type, ggplot_mod,
       prcomp_args, prcomp_autoplot_args, dist_method, hclust_method, dim_reduce,
-      clust_bar_var, height_main, width_main, color_palettes) {
+      clust_bar_var, height_main, width_main, color_palette) {
 
       var_base <- names(private$design$get_pairwise_design())
       data_grouped <- private$design$get_pairwise_design() %>%
@@ -1360,6 +1308,8 @@ ExprData <- R6::R6Class("ExprData", # nolint
         prcomp_autoplot_args$data <- data_design
         g <- do.call(ggplot2::autoplot, prcomp_autoplot_args) +
           ggplot2::ggtitle(in_title) +
+          ggplot2::scale_fill_brewer(palette = color_palette) +
+          ggplot2::scale_color_brewer(palette = color_palette) +
           THEME_NEXOMIS +
           ggplot2::theme(legend.position = "bottom")
         if (! is.null(ggplot_mod)) {
@@ -1368,13 +1318,17 @@ ExprData <- R6::R6Class("ExprData", # nolint
         return(g)
       } else if (plot_type == "hclust") {
         if (is.null(dim_reduce)) {
-          d <- dist(t(in_data), method = dist_method)
+          d <- philentropy::distance(
+            t(in_data), method = dist_method, as.dist.obj = TRUE
+          )
         } else {
           prcomp_args$x <- t(in_data)
           prcomp_args$rank. <- as.integer(dim_reduce)
           pca_res <- do.call(prcomp, prcomp_args)
           str(pca_res)
-          d <- dist(pca_res$x, method = dist_method)
+          d <- philentropy::distance(
+            pca_res$x, method = dist_method, as.dist.obj = TRUE
+          )
         }
         hc <- hclust(d, hclust_method)
 
@@ -1432,12 +1386,12 @@ ExprData <- R6::R6Class("ExprData", # nolint
             ggplot2::ggplot(data_design,
               ggplot2::aes(.data$sample, y = 1, fill = .data$voi)
             ) +
-              ggplot2::ylab("") +
+              ggplot2::ylab(var) +
               ggplot2::geom_tile(color = "black") + ggplot2::theme_minimal() +
               ggplot2::coord_cartesian(
                 xlim = c(-1, nrow(data_design) + 1),
                 expand = FALSE) +
-              ggplot2::scale_fill_brewer(palette = color_palettes[nth])
+              ggplot2::scale_fill_brewer(palette = color_palette)
           list_legs[[nth]] <-
             ggpubr::as_ggplot(ggpubr::get_legend(
               var_plot +

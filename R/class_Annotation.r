@@ -70,7 +70,7 @@ Annotation <- R6::R6Class( # nolint
               col.names = c(
                 "txid", "gid", "type", "symbol", "tax_id", "tax_name"
               ),
-              colTypes = c("c", "c", "c", "c", "c", "c")
+              colClasses = rep("character", 6)
             )
           }))
         }
@@ -340,6 +340,14 @@ Annotation <- R6::R6Class( # nolint
           unique(annotation$tax_id),
           fetch_id_mapping
         ))
+      }
+
+      if (is.character(idmapping) && length(idmapping) == 1) {
+        if (! file.exists(idmapping)){
+          logging::logerror("idmapping file not found")
+          stop(1)
+        }
+        idmapping <- readr::read_delim(idmapping, delim = "\t")
       }
 
       dest_vector <- c("type", "tax_id", "tax_name", "gid", "symbol")
