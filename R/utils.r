@@ -45,11 +45,12 @@ UP_TO_DOWN_GRADIENT_COLORS <- c( # nolint
 #' @export
 make_test_data_from_xlsx <- function(set_id) {
 
-  config_file_path <- system.file("extdata",
-    paste("sim_inputs",
-      set_id, "config.xlsx", sep = "/"),
+  config_dir_path <- system.file("extdata",
+    paste("sim_inputs", set_id, sep = "/"),
     package = "nexodiff"
   )
+  
+  csv_config_dir <- file.path(config_dir_path, "config")
 
   tmp_dir <- tempdir(TRUE)
 
@@ -57,17 +58,17 @@ make_test_data_from_xlsx <- function(set_id) {
   annotation_file_path <- paste(tmp_dir, "annotation.txt", sep = "/")
   id_mapping_file_path <- paste(tmp_dir, "id_mapping.tab", sep = "/")
   results <- list(
-    config = config_file_path,
+    config = csv_config_dir,
     design = design_file_path,
     annotation = annotation_file_path,
     id_mapping = id_mapping_file_path,
     src_dir = tmp_dir
   )
-  annotation <- openxlsx::read.xlsx(
-    xlsxFile = config_file_path,
-    sheet = "annotation",
-    colNames = FALSE
-  )
+  
+  # Read annotation from CSV file
+  annotation_csv_path <- file.path(csv_config_dir, "annotation.csv")
+  annotation <- readr::read_csv(annotation_csv_path, col_names = FALSE, 
+                               show_col_types = FALSE)
   names(annotation) <- c("gene", "tx", "type", "tax_id", "tax_name")
   annotation$txid <- paste(
     annotation$gene,
@@ -124,11 +125,9 @@ make_test_data_from_xlsx <- function(set_id) {
     col_names = TRUE
   )
 
-  design <- openxlsx::read.xlsx(
-    xlsxFile = config_file_path,
-    sheet = "design",
-    colNames = TRUE
-  )
+  # Read design from CSV file
+  design_csv_path <- file.path(csv_config_dir, "design.csv")
+  design <- readr::read_csv(design_csv_path, show_col_types = FALSE)
 
   readr::write_delim(
     design,
@@ -138,17 +137,13 @@ make_test_data_from_xlsx <- function(set_id) {
     col_names = TRUE
   )
 
-  raw <- openxlsx::read.xlsx(
-    xlsxFile = config_file_path,
-    sheet = "tx_raw",
-    colNames = TRUE
-  )
+  # Read raw data from CSV file
+  raw_csv_path <- file.path(csv_config_dir, "tx_raw.csv")
+  raw <- readr::read_csv(raw_csv_path, show_col_types = FALSE)
 
-  len <- openxlsx::read.xlsx(
-    xlsxFile = config_file_path,
-    sheet = "tx_len",
-    colNames = TRUE
-  )
+  # Read length data from CSV file
+  len_csv_path <- file.path(csv_config_dir, "tx_len.csv")
+  len <- readr::read_csv(len_csv_path, show_col_types = FALSE)
 
   for (sample in names(raw)){
     h5_file_name <- paste(tmp_dir, "/", sample, ".h5", sep = "")

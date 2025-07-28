@@ -105,7 +105,8 @@ PairwiseDESeq2 <- R6::R6Class("PairwiseDESeq2", # nolint
       only_paired <- private$opts$only_paired
 
       results <- private$expr_data$extract_pairwise_data_with_design(
-        in_batch = in_batch, in_group = in_group)
+        in_batch = in_batch, in_group = in_group
+      )
 
       groupvars <- c("group", add_vars)
       design_deseq2 <- results$design_table

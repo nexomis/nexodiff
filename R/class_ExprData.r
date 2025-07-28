@@ -1,6 +1,11 @@
 #' @include utils.r
 #' @include class_Annotation.r
 #' @include class_PairwiseDesign.r
+#' @include class_ExprData_utils_filter.r
+#' @include class_ExprData_utils_summary.r
+#' @include class_ExprData_utils_norm.r
+#' @include class_ExprData_utils_plot.r
+#' @include class_ExprData_utils_extract.r
 
 NULL
 
@@ -113,46 +118,20 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' @return A list of count tables per feature
     #' @examples
     #' show_etags_summary("raw")
-    show_etags_summary = function(type = "etags",
-      in_batch = NULL) {
-      results <- list()
-
-      etag_id <- if (private$at_gene_level) "tgid" else "txid"
-      etags <- private$selected_ids
-
-      if (type == "etags") {
-        for (metric_id in c("tax_id", "tax_name", "type")) {
-          results[[metric_id]] <- table(
-            private$annotation$generate_translate_dict(etag_id, metric_id)[etags]
-          )
-        }
-        results$tax_id <- table(
-          private$annotation$generate_translate_dict(etag_id, "tax_id")[etags])
-        results$tax_name <- table(
-          private$annotation$generate_translate_dict(etag_id, "tax_name")[etags])
-        results$type <- table(
-          private$annotation$generate_translate_dict(etag_id, "type")[etags])
-      } else {
-        if (type == "raw") {
-          data <- as.data.frame(self$filter_and_get_raw(in_batch))
-        } else if (type == "norm") {
-          data <- as.data.frame(self$compute_norm(in_batch))
-        } else {
-          logging::logerror("Unknown type for summary")
-          stop()
-        }
-        for (metric_id in c("tax_id", "tax_name", "type")) {
-          data[, metric_id] <-
-            private$annotation$generate_translate_dict(
-              etag_id, metric_id)[row.names(data)]
-          results[[metric_id]] <-
-            aggregate(formula(paste(". ~", metric_id)), data, sum)
-          row.names(results[[metric_id]]) <- results[[metric_id]][, metric_id]
-          results[[metric_id]][, metric_id] <- NULL
-          data[, metric_id] <- NULL
-        }
+    show_etags_summary = function(
+      type = "etags", in_batch = NULL
+    ) {
+      data <- NULL
+      if (type == "raw") {
+        data <- self$filter_and_get_raw(in_batch)
+      } else if (type == "norm") {
+        data <- self$compute_norm(in_batch)
       }
-    results
+
+      summarize_etags(
+        private$selected_ids, private$annotation, private$at_gene_level,
+        type, data
+      )
     },
 
     #' @description
@@ -170,28 +149,12 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' - "excl" to keep only an expression tag if its value for the variable
     #' designated with `filtered_var` is not in `values`.
     filter_and_set_selected_ids = function(
-      values, filtered_var = "type", filter_type = "keep") {
-      etag_id <- private$main_etag
-
-      if (! filtered_var %in% c("tax_id", "tax_name", "type")) {
-        logging::logerror("Wrong value for filtered_var argument")
-        stop()
-      }
-
-      etags <- row.names(private$raw)
-      filter_dict <- private$annotation$generate_translate_dict(
-        etag_id, filtered_var)
-
-      if (filter_type == "keep") {
-        keep_ids <- names(filter_dict)[filter_dict %in% values]
-      } else if (filter_type == "excl") {
-        keep_ids <- names(filter_dict)[!filter_dict %in% values]
-      } else {
-        logging::logerror("Wrong value for filter_type argument")
-        stop()
-      }
-
-      private$selected_ids <- intersect(keep_ids, private$selected_ids)
+      values, filtered_var = "type", filter_type = "keep"
+    ) {
+      private$selected_ids <- filter_etags(
+        private$selected_ids, private$annotation, private$main_etag,
+        values, filtered_var, filter_type
+      )
     },
 
     #' @description
@@ -241,90 +204,24 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' @param a_trim_value Threshold value to trim genes from the calculation of
     #' the normalization factors based on mean gene expression (A-value).
     #' @param replace_zero_by Replace all zero raw count by the given value.
-    compute_and_set_inter_norm_fact = function(method = "median",
-      norm_scale = "group", norm_by = "sample", norm_ref = "all",
-      norm_ref_mean = "mod.geometric", m_trim_prop = 0.3,
+    compute_and_set_inter_norm_fact = function(
+      method = "median", norm_scale = "group", norm_by = "sample",
+      norm_ref = "all", norm_ref_mean = "mod.geometric", m_trim_prop = 0.3,
       m_trim_mean = "mod.geometric", a_trim_value = 0.5, a_trim_norm = FALSE,
-      a_trim_mean = "mod.geometric", replace_zero_by = 0, ncpus = 1) {
+      a_trim_mean = "mod.geometric", replace_zero_by = 0, ncpus = 1
+    ) {
 
-      if (method == "tmm" & m_trim_mean == "median") {
-        logging::logwarning(paste("tmm method with median as mean function...",
-          "Is that not simply the median method ?")
-        )
-      }
-
-      if (method == "tmm" & m_trim_prop == 0) {
-        logging::logerror("`m_trim_prop` cannot be 0 with `method` tmm")
-        stop()
-      }
-
-      if (m_trim_prop <= 0 | m_trim_prop >= 0.5) {
-        logging::logerror("`m_trim_prop must` be between 0 and 0.5 excluded")
-        stop()
-      }
+      do.call(inter_norm_check, as.list(match.call()[-1]))
 
       norm_ref_mean_fun <- set_mean_function(norm_ref_mean)
       a_trim_mean_fun <- set_mean_function(a_trim_mean)
       m_trim_mean_fun <- set_mean_function(m_trim_mean)
 
       if (method == "median") {
-        calc_norm_fact <- function(norm, sample_ref) {
-          # filter out when sample_ref = 0
-          keep_row <- sample_ref != 0
-          norm <- norm[keep_row, ] / sample_ref[keep_row]
-          norm_fact <- 1 / matrixStats::colMedians(norm)
-          names(norm_fact) <- colnames(norm)
-          return(norm_fact)
-        }
+        calc_norm_fact <- calc_norm_fact_median
       } else if (method == "tmm") {
         logging::logerror("TMM method is not implemented yet")
         stop()
-      }
-
-      if (norm_by == "group") {
-        logging::logerror("`norm_by` group is not yet implemented")
-        stop()
-      }
-
-      get_refrence <- function(norm, ctrl_samples) {
-        if (all(norm_ref == "all")) {
-          norm_ref_samples <- colnames(norm)
-        } else if (all(ref == "ctrl")) {
-          norm_ref_samples <- ctrl_samples
-        } else if (all(ref %in% colnames(norm)) |
-          all(ref %in% seq_len(ncol(norm)))
-        ) {
-          norm_ref_samples <- ref
-        } else {
-          logging::logerror("`ref` argument not recognized")
-          stop()
-        }
-        norm_ref <- unlist(lapply(seq(1, nrow(norm)), function(i) {
-          norm_ref_mean_fun(norm[i, norm_ref_samples])
-        }))
-        return(norm_ref)
-      }
-
-
-
-      get_trimmed_mat <- function(raw, norm_fact) {
-
-        trimmed_mat <- raw * norm_fact
-
-        if (a_trim_norm) {
-          base_mat <- trimmed_mat
-        } else {
-          base_mat <- raw
-        }
-        base_mat_mean <-  unlist(lapply(seq(1, nrow(base_mat)), function(i) {
-          a_trim_mean_fun(base_mat[i, ])
-        }))
-        trimmed_mat[trimmed_mat == 0] <- replace_zero_by
-        trimmed_mat[base_mat_mean > a_trim_value, ]
-      }
-
-      if (ncpus > parallelly::availableCores() - 1) {
-        logging::logwarn("The number of core asked was more than available")
       }
 
       if (ncpus == 1) {
@@ -343,15 +240,19 @@ ExprData <- R6::R6Class("ExprData", # nolint
 
       if (norm_scale == "group") {
         map_base <- dplyr::distinct(private$design$get_pairwise_design(
-          )[, c("batch", "group")])
+        )[, c("batch", "group")])
         tmp <- furrr::future_map2(
           map_base$batch,
           map_base$group,
           function(batch, group) {
             res <- self$extract_pairwise_data_with_design(batch, group)
             # here we only use intra_norm !
-            norm <- get_trimmed_mat(res$raw, res$intra_norm_fact)
-            sample_ref <- get_refrence(norm, res$ctrl_samples)
+            norm <- get_trimmed_mat(
+              res$raw, res$intra_norm_fact, a_trim_norm,
+              a_trim_value, a_trim_mean_fun, replace_zero_by
+            )
+            sample_ref <-
+              get_reference(norm, res$ctrl_samples, norm_ref, norm_ref_mean_fun)
             calc_norm_fact(norm, sample_ref)
           }
         )
@@ -376,25 +277,24 @@ ExprData <- R6::R6Class("ExprData", # nolint
         private$inter_norm_fact <- furrr::future_map(
           private$design$list_batches(),
           function(batch) {
-            norm <- get_trimmed_mat(self$filter_and_get_raw(batch),
-              self$compute_norm_fact(batch))
-            sample_ref <- get_refrence(norm,
-              private$design$find_control_group_per_batches()[batch])
+            norm <- get_trimmed_mat(
+              self$filter_and_get_raw(batch), self$compute_norm_fact(batch),
+              a_trim_norm, a_trim_value, a_trim_mean_fun, replace_zero_by
+            )
+            sample_ref <- get_reference(
+              norm, private$design$find_control_group_per_batches()[batch],
+              norm_ref, norm_ref_mean_fun
+            )
             calc_norm_fact(norm, sample_ref)
           }
         )
         names(private$inter_norm_fact) <- private$design$list_batches()
       } else if (norm_scale == "design") {
-        norm <- get_trimmed_mat(self$get_raw(),
-          self$compute_norm_fact())
-
-        if (norm_ref == "ctrl") {
-          logging::logerror(
-            "`norm_ref` ctrl is not compatible with `norm_scale` design"
-          )
-          stop()
-        }
-        sample_ref <- get_refrence(norm, NULL)
+        norm <- get_trimmed_mat(
+          self$get_raw(), self$compute_norm_fact(),
+          a_trim_norm, a_trim_value, a_trim_mean_fun, replace_zero_by
+        )
+        sample_ref <- get_reference(norm, NULL, norm_ref, norm_ref_mean_fun)
         private$inter_norm_fact <-  calc_norm_fact(norm, sample_ref)
       }
 
@@ -431,52 +331,9 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #'   * "fpkm" for Fragment per kilobase of transcript per million mapped
     compute_and_set_intra_norm_fact = function(method) {
       private$intra_norm_fact_method <- method
-      for (batch in private$design$list_batches()) {
-        if (method == "tpm") {
-          private$intra_norm_fact[private$selected_ids, ] <-
-            sweep(1e+06 / self$get_len(),
-              2,
-              colSums(self$get_raw() /
-                self$get_len()),
-              FUN = "/"
-            )
-        } else if (method == "fpk") {
-          private$intra_norm_fact[private$selected_ids, ] <-
-            1e+03 / self$get_len()
-        } else if (method == "fpm") {
-          private$intra_norm_fact[private$selected_ids, ] <-
-            sweep(
-              matrix(1e+06,
-                nrow = length(private$selected_ids),
-                ncol = ncol(private$raw),
-                dimnames = list(
-                  private$selected_ids,
-                  colnames(private$raw)
-                )
-              ),
-              2,
-              colSums(self$get_raw()),
-              FUN = "/"
-            )
-        } else if (method == "fpkm") {
-          private$intra_norm_fact[private$selected_ids, ] <-
-            sweep(1e+09 / self$get_len(),
-              2,
-              colSums(self$get_raw()),
-              FUN = "/"
-            )
-        } else if (method == "none") {
-          private$intra_norm_fact[private$selected_ids, ][] <- 1
-        }else {
-          logging::logdebug("Unrecognized normalization method")
-          stop()
-        }
-
-        # There will be NaN value where colSums(private$raw) or
-        # colSums(private$raw/private$len) is 0
-        # We are going to replace those NaN value by 0
-        private$intra_norm_fact[is.nan(private$intra_norm_fact)] <- 1
-      }
+      private$intra_norm_fact <- compute_intra_norm_factor(
+        method, private$selected_ids, self$get_raw(), self$get_len()
+      )
     },
 
     #' @description
@@ -526,29 +383,10 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' Get normalization factors matrix
     #' @return Numeric matrix with normalization factors for expressed tags
     compute_norm_fact = function(in_batch = NULL, in_group = NULL,
-      inter_norm = FALSE, intra_norm = TRUE, include_ctrl = FALSE) {
+      inter_norm = FALSE, intra_norm = TRUE) {
 
       row_ids <- private$selected_ids
-
-      all_group <- in_group
-
-      if ((length(in_batch) != 1 | length(in_group) != 1) & include_ctrl) {
-        logging::logerror(paste(
-          "include_ctrl set to TRUE is possible only when specifying",
-          "one and only one in_group and in_batch args"
-        ))
-        stop()
-      }
-
-      if (include_ctrl) {
-        if ((! is.null(in_batch)) & (! is.null(in_group))) {
-          ctrl_group <- private$design$find_control_group_per_batches(
-            )[in_batch]
-          all_group <- c(in_group, ctrl_group)
-        }
-      }
-
-      col_ids <- private$design$extract_sample_names(in_batch, all_group)
+      col_ids <- private$design$extract_sample_names(in_batch, in_group)
 
       if (intra_norm) {
         norm_fact <- private$intra_norm_fact[row_ids, col_ids]
@@ -631,16 +469,10 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' the `in_batch` argument might be mandatory.
     #' @return numeric matrix with norm counts for expressed tags
     compute_norm = function(in_batch = NULL, in_group = NULL,
-      inter_norm = FALSE, include_ctrl = FALSE) {
-      if (include_ctrl) {
-        ctrl_group <- private$design$find_control_group_per_batches()[in_batch]
-      } else {
-        ctrl_group <- c()
-      }
+      inter_norm = FALSE) {
       norm_fact <-
-        self$compute_norm_fact(in_batch, in_group, inter_norm = inter_norm,
-          include_ctrl = include_ctrl)
-      norm <- self$filter_and_get_raw(in_batch, c(in_group, ctrl_group))
+        self$compute_norm_fact(in_batch, in_group, inter_norm = inter_norm)
+      norm <- self$filter_and_get_raw(in_batch, in_group)
       return(norm * norm_fact[, colnames(norm)])
     },
 
@@ -695,19 +527,24 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #'  - total: Sum of count or normalized value
     sum_per_type_per_sample = function(intra_norm = FALSE, log2_expr = FALSE) {
       to_type <- private$annotation$generate_translate_dict(
-        private$main_etag, "type")
+        private$main_etag, "type"
+      )
       format_data <- function(data) {
         data$type <- to_type[row.names(data)]
-          temp <- tidyr::pivot_longer(aggregate(. ~ type, data, sum),
-            cols = -type, names_to = "sample", values_to = "total")
-         return(subset(temp, total > 10))
+        temp <- tidyr::pivot_longer(
+          aggregate(. ~ type, data, sum),
+          cols = -type, names_to = "sample", values_to = "total"
+        )
+        subset(temp, total > 10)
       }
 
       if (intra_norm) {
         data <- purrr::map_dfr(
           private$design$list_batches(),
           function(batch) {
-            format_data(as.data.frame(self$compute_norm(in_batch = batch)))
+            format_data(as.data.frame(self$compute_norm(
+              in_batch = batch, intra_norm = intra_norm, inter_norm = FALSE
+            )))
           }
         )
       } else {
@@ -728,15 +565,16 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' @param horizonal_bar whether the bar in the plot are horizontal rather
     #' than vertical
     #' @return ggplot2 graph
-    plot_sum_per_type_per_sample = function(intra_norm = FALSE,
-      exclude_type = c(), same_scale = TRUE, horizonal_bar = TRUE,
-      log2_expr = FALSE) {
+    plot_sum_per_type_per_sample = function(
+      intra_norm = FALSE, exclude_type = c(), same_scale = TRUE,
+      horizonal_bar = TRUE, log2_expr = FALSE
+    ) {
       data_design <-
         private$design$get_pairwise_design()[, c("batch", "group", "sample")]
-      data <- dplyr::left_join(
-        data_design,
+      data <- dplyr::left_join(data_design,
         self$sum_per_type_per_sample(intra_norm = intra_norm, log2_expr),
-        by = "sample") %>%
+        by = "sample"
+      ) %>%
         dplyr::filter(! .data$type %in% exclude_type)
       batch2label <- private$design$get_b_labels()
       group2label <- private$design$get_g_labels()
@@ -767,8 +605,9 @@ ExprData <- R6::R6Class("ExprData", # nolint
             group = ggplot2::as_labeller(group2label)
           )
         ) +
-        ggplot2::scale_y_continuous(
-          labels = scales::label_scientific(digits = 2)) +
+        ggplot2::scale_y_continuous(labels = scales::label_scientific(
+          digits = 2
+        )) +
         ggplot2::scale_fill_brewer(palette = "BrBG") +
         THEME_NEXOMIS +
         ggplot2::labs(
@@ -799,9 +638,10 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' (see https://arxiv.org/abs/1806.06403)
     #' * "arithmetic"
     #' @return ggplot2 graph
-    plot_dist_per_sample = function(intra_norm = TRUE, inter_norm = TRUE,
-      log2_expr = TRUE, geoms = c("boxplot"),
-      mean_fun = NULL) {
+    plot_dist_per_sample = function(
+      intra_norm = TRUE, inter_norm = TRUE, log2_expr = TRUE,
+      geoms = c("boxplot"), mean_fun = NULL
+    ) {
 
       if (length(setdiff(geoms, c("boxplot", "violin", "histo"))) > 0) {
         logging::logerror("unrecognized value for geoms")
@@ -822,18 +662,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
       batch2label <- private$design$get_b_labels()
       group2label <- private$design$get_g_labels()
       get_data <- function(in_batch, in_group) {
-        results <- self$extract_pairwise_data_with_design(in_batch, in_group,
-          include_ctrl = FALSE)
-        keep_samples <- results$test_samples
-        data <- results$raw[, keep_samples]
-        if (intra_norm) {
-           data <- data *
-            results$intra_norm_fact[, keep_samples]
-        }
-        if (inter_norm) {
-          data <- data %*%
-            diag(results$inter_norm_fact[keep_samples])
-        }
+        data <- self$compute_norm(in_batch, in_group, inter_norm)
         if (log2_expr) {
           data <- log2(data + 2)
         }
@@ -900,19 +729,20 @@ ExprData <- R6::R6Class("ExprData", # nolint
       return(g)
     },
 
-
     #' @description
     #' Function to draw complex plots
     #' @param color_palette name of the palette of color to use
     #' @return ggplot2 graph
-    plot_complex = function(plot_type, in_batch = NULL, in_group = NULL,
+    plot_complex = function(
+      plot_type, in_batch = NULL, in_group = NULL,
       intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
       plot_scale = "group", ggplot_mod = NULL, color_palette = "BrBg",
       prcomp_args = list(), prcomp_autoplot_args = list(),
       dist_method = "euclidean", hclust_method = "ward.D2", dim_reduce = NULL,
       clust_bar_var = c(), height_main = 10, width_main = 4,
       include_ctrl_at_group_scale = FALSE,
-      tags = NULL, tag_type = NULL, df_design_filter = NULL) {
+      tags = NULL, tag_type = NULL, df_design_filter = NULL
+    ) {
 
       if (is.null(tag_type)) {
         dict_ids <- private$selected_ids
@@ -957,7 +787,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
         df <- tr_fn(as.matrix(df))
         row.names(df) <- rn
         colnames(df) <- cn
-        return(df)
+        df
       }
 
       data_design <-
@@ -1013,27 +843,19 @@ ExprData <- R6::R6Class("ExprData", # nolint
           data_design$batch,
           data_design$group,
           function(x, y) {
-            results <- self$extract_pairwise_data_with_design(
-              x, y, include_ctrl = include_ctrl_at_group_scale)
+            in_data <- self$compute_norm(x, y, inter_norm)
+            if (include_ctrl_at_group_scale) {
+              ctrl_group <- private$design$find_control_group_per_batches()[x]
+              ctrl_data <- self$compute_norm(x, ctrl_group, inter_norm)
+              in_data <- cbind(in_data, ctrl_data)
+            }
             selected_samples <- intersect(
               unique(dplyr::filter(df_design_filter,
                 .data$batch == .env$x & .data$group == .env$y)$sample),
-              colnames(results$raw)
+              colnames(in_data)
             )
-            in_data <- results$raw[selected_ids, selected_samples]
-            rn <- row.names(in_data)
-            cn <- colnames(in_data)
-            if (intra_norm) {
-              in_data <- in_data *
-                results$intra_norm[selected_ids, selected_samples]
-            }
-            if (inter_norm) {
-              in_data <- in_data %*%
-                diag(results$inter_norm_fact[selected_samples])
-            }
+            in_data <- in_data[selected_ids, selected_samples]
             in_data <- tr_fn_df(in_data)
-            row.names(in_data) <- rn
-            colnames(in_data) <- cn
             in_title <- paste(
               private$design$get_b_labels()[x],
               private$design$get_g_labels()[y],
@@ -1056,7 +878,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
           unique(data_design$batch),
           function(x) {
             if (intra_norm) {
-              data <- self$compute_norm(x, in_group, inter_norm, FALSE)
+              data <- self$compute_norm(x, in_group, inter_norm)
             } else {
               data <- self$filter_and_get_raw(x, in_group)
             }
@@ -1086,7 +908,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
           stop()
         }
         if (intra_norm) {
-          data <- self$compute_norm(in_batch, in_group, inter_norm, FALSE)
+          data <- self$compute_norm(in_batch, in_group, inter_norm)
         } else {
           data <- self$filter_and_get_raw(in_batch, in_group)
         }
@@ -1135,8 +957,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' - "ctrl_samples" : vector with control sample names
     #' - "design_table" : design table only for those samples
     #' - "ctrl_group" : the control group
-    extract_pairwise_data_with_design = function(in_batch, in_group,
-      include_ctrl = TRUE) {
+    extract_pairwise_data_with_design = function(in_batch, in_group) {
       group_per_batches <-
         private$design$list_groups_per_batches(include_ctrl = TRUE)
 
@@ -1163,36 +984,33 @@ ExprData <- R6::R6Class("ExprData", # nolint
         private$design$extract_sample_names(in_batch, in_group)
 
       # find batch control
-      if (include_ctrl) {
-        results$ctrl_group <-
-          private$design$find_control_group_per_batches()[in_batch]
-        results$ctrl_samples <-
-          private$design$extract_sample_names(in_batch, results$ctrl_group)
-        all_groups <- c(in_group, results$ctrl_group)
-        results$all_samples <-
+      results$ctrl_group <-
+        private$design$find_control_group_per_batches()[in_batch]
+      results$ctrl_samples <-
+        private$design$extract_sample_names(in_batch, results$ctrl_group)
+      all_groups <- c(in_group, results$ctrl_group)
+      results$all_samples <-
         unique(c(results$test_samples, results$ctrl_samples))
-      } else {
-        all_groups <- in_group
-        results$all_samples <- results$test_samples
-      }
 
       # norm is not computed because if the table is big, it's too long
 
       results$raw <- self$filter_and_get_raw(in_batch, all_groups)[,
-        results$all_samples]
+        results$all_samples
+      ]
       results$len <- self$filter_and_get_len(in_batch, all_groups)[,
-        results$all_samples]
+        results$all_samples
+      ]
 
-      results$intra_norm_fact <-
-        self$compute_norm_fact(in_batch, in_group, inter_norm = FALSE,
-        intra_norm = TRUE, include_ctrl = include_ctrl)[, results$all_samples]
+      results$intra_norm_fact <- self$compute_norm_fact(
+        in_batch, all_groups, inter_norm = FALSE, intra_norm = TRUE
+      )[, results$all_samples]
 
-      results$inter_norm_fact <-
-        self$compute_norm_fact(in_batch, in_group, inter_norm = TRUE,
-        intra_norm = FALSE, include_ctrl = include_ctrl)[results$all_samples]
+      results$inter_norm_fact <- self$compute_norm_fact(
+        in_batch, all_groups, inter_norm = TRUE, intra_norm = FALSE
+      )[results$all_samples]
 
-      results$design_table <- private$design$get_pairwise_design(
-        in_batch, all_groups)
+      results$design_table <-
+        private$design$get_pairwise_design(in_batch, all_groups)
 
       row.names(results$design_table) <- results$design_table$sample
       results$design_table <- results$design_table[results$all_samples, ]
@@ -1481,7 +1299,8 @@ ExprDataGene <- R6::R6Class("ExprDataGene", # nolint
       # Summarize raw counts
 
       txid2tgid <- private$annotation$generate_translate_dict(
-        expr_data_transcript$get_main_etag(), private$main_etag)
+        expr_data_transcript$get_main_etag(), private$main_etag
+      )
 
       private$raw <- as.data.frame(expr_data_transcript$get_raw())
       private$raw$gene <-
@@ -1567,8 +1386,10 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
     #' @param suffix_pattern See clean_txid_versions method
     #' Default = txid
     #' @return A new `ExprDataTranscript` object.
-    initialize = function(design, annotation, with_fixed_length = FALSE, log_level = "WARN",
-      format = "kallisto", suffix_pattern = "\\.\\d+$") {
+    initialize = function(
+      design, annotation, with_fixed_length = FALSE, log_level = "WARN",
+      format = "kallisto", suffix_pattern = "\\.\\d+$"
+    ) {
       logging::basicConfig(log_level)
 
       private$design <- design
