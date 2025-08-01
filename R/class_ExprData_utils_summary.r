@@ -4,43 +4,35 @@ NULL
 
 #' Helper function for ExprData$show_etags_summary
 #'
-#' @param selected_ids private$selected_ids (see ExprData)
 #' @param annotation private$annotation (see ExprData)
 #' @param at_gene_level private$at_gene_level (see ExprData)
-#' @param type see ExprData$show_etags_summary
 #' @param data input data
+#' @param tr_fn transformation function to apply to data
+#' @param sum_fn aggregation function to apply after transformation
 #' @return A list of count tables per feature
 summarize_etags <- function(
-  selected_ids, annotation, at_gene_level, type = "etags",
-  data
+  annotation, at_gene_level, data, tr_fn, sum_fn
 ) {
+  # Apply transformation function to data
+  assert_that(is.matrix(data))
+  assert_that(is.function(sum_fn))
+  if (!is.null(tr_fn)) {
+    data <- tr_fn(data)
+  }
 
   results <- list()
   etag_id <- if (at_gene_level) "tgid" else "txid"
-  etags <- selected_ids
-
-  if (type == "etags") {
-    for (metric_id in c("tax_id", "tax_name", "type")) {
-      results[[metric_id]] <- table(
-        annotation$generate_translate_dict(etag_id, metric_id)[etags]
-      )
-    }
-  } else {
-    if (is.null(data)) {
-      logging::logerror("Unknown type for summary")
-      stop()
-    }
-    for (metric_id in c("tax_id", "tax_name", "type")) {
-      data[, metric_id] <-
-        annotation$generate_translate_dict(
-          etag_id, metric_id
-        )[row.names(data)]
-      results[[metric_id]] <-
-        aggregate(formula(paste(". ~", metric_id)), data, sum)
-      row.names(results[[metric_id]]) <- results[[metric_id]][, metric_id]
-      results[[metric_id]][, metric_id] <- NULL
-      data[, metric_id] <- NULL
-    }
+  data <- as.data.frame(data)
+  for (metric_id in c("tax_id", "tax_name", "type")) {
+    data[, metric_id] <-
+      annotation$generate_translate_dict(
+        etag_id, metric_id
+      )[row.names(data)]
+    results[[metric_id]] <-
+      aggregate(formula(paste(". ~", metric_id)), data, sum_fn)
+    row.names(results[[metric_id]]) <- results[[metric_id]][, metric_id]
+    results[[metric_id]][, metric_id] <- NULL
+    data[, metric_id] <- NULL
   }
   results
 }

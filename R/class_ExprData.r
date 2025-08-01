@@ -105,33 +105,35 @@ NULL
 ExprData <- R6::R6Class("ExprData", # nolint
   public = list(
 
-    #' @title Show raw count summary per tax_id, tax_name and rna type for
+    #' @title Show expression summary per tax_id, tax_name and rna type for
     #' selected expressed tags
     #' @description
-    #' This function computes a raw count summary per tax_id, tax_name and rna
-    #' type for selected expressed tags, and returns a list of count tables per
-    #' feature.
-    #' @param type A string specifying the type of summary to compute. Possible
-    #' values are:
-    #' - "etags" for the number of expression tags
-    #' - "raw" for the sum of raw reads counts per samples
-    #' - "norm" for the sum of normalized reads counts per samples.
-    #' @return A list of count tables per feature
+    #' This function computes a summary per tax_id, tax_name and rna type for
+    #' selected expressed tags, and returns a list of tables per feature.
+    #' @param tr_fn A function to transform the expression values before
+    #' summarizing. Default is identity function (no transformation).
+    #' @param sum_fn A function to aggregate the transformed values. Default
+    #' is "sum", but can be "sum_fn = function(x) sum(as.integer(x > 0))"
+    #' to count non zero genes for example.
+    #' @param intra_norm A boolean indicating whether to apply intra-sample
+    #' normalization. Only used when type="norm".
+    #' @param inter_norm A boolean indicating whether to apply inter-sample
+    #' normalization. Only used when type="norm".
+    #' @return A list of tables per feature
     #' @examples
-    #' show_etags_summary("raw")
+    #' show_etags_summary()
+    #' show_etags_summary(intra_norm=TRUE)
     show_etags_summary = function(
-      type = "etags", in_batch = NULL
+      in_batch = NULL, tr_fn = NULL, sum_fn = sum,
+      intra_norm = FALSE, inter_norm = FALSE
     ) {
-      data <- NULL
-      if (type == "raw") {
-        data <- self$filter_and_get_raw(in_batch)
-      } else if (type == "norm") {
-        data <- self$compute_norm(in_batch)
-      }
+
+      data <- self$compute_norm(
+        in_batch = in_batch, intra_norm = intra_norm, inter_norm = inter_norm
+      )
 
       summarize_etags(
-        private$selected_ids, private$annotation, private$at_gene_level,
-        type, data
+        private$annotation, private$at_gene_level, data, tr_fn, sum_fn
       )
     },
 

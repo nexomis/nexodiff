@@ -375,9 +375,9 @@ Annotation <- R6::R6Class( # nolint
       } else if (is.character(idmapping)) {
         assert_that(length(idmapping) == 1)
         assert_that(file.exists(idmapping))
-        options(readr.show_col_types = FALSE)
-        idmapping <- readr::read_delim(idmapping, delim = "\t")
-        options(readr.show_col_types = TRUE)
+        idmapping <- readr::read_delim(
+          idmapping, delim = "\t", show_col_types = FALSE
+        )
       }
 
       dest_vector <- c("type", "tax_id", "tax_name", "gid", "symbol")
