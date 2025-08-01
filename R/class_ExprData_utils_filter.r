@@ -1,3 +1,7 @@
+#' @include nexodiff-package.R
+#' @include utils.r
+NULL
+
 #' Helper function for ExprData$filter_and_set_selected_ids
 #'
 #' @param current_selected_ids private$selected_ids (see ExprData)

@@ -231,8 +231,9 @@ will be written. The directory will be created if it does not exist.}
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Invisibly returns TRUE if successful, or FALSE/throws error on failure.
-Logs information about files written or warnings for types with no data.
+Invisibly returns TRUE if successful, or FALSE/throws error on
+failure. Logs information about files written or warnings for types with
+no data.
 }
 }
 \if{html}{\out{<hr>}}

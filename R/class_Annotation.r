@@ -46,20 +46,22 @@ Annotation <- R6::R6Class( # nolint
       gff_type_filter = c(".*RNA", ".*transcript")
     ) {
       logging::basicConfig(log_level)
-
       if (!is.null(annotation_dir)) {
-        logging::logdebug("Annotation$initialize: Initializing from directory %s", annotation_dir)
+        logging::logdebug(
+          "Annotation$initialize: Initializing from directory %s",
+          annotation_dir
+        )
         private$initialize_from_directory(annotation_dir)
       } else if (!is.null(annotation)) {
         # Original initialization logic using annotation files
         if (format_gff) {
           logging::logdebug("Annotation$initialize: Parsing GFF annotation")
-        # If the annotation file is in GFF format, parse it using the parse_gff
-        # to_annotation function
-        annotation <- data.table::rbindlist(lapply(
-          annotation,
-          function(x) parse_gff_to_annotation(x, gff_type_filter)
-        ))
+          # If the annotation file is in GFF format, parse it using the
+          # parse_gff_to_annotation function
+          annotation <- data.table::rbindlist(lapply(
+            annotation,
+            function(x) parse_gff_to_annotation(x, gff_type_filter)
+          ))
         } else {
           # If the annotation file is not in GFF format, read it using
           # data.table::fread
@@ -74,10 +76,15 @@ Annotation <- R6::R6Class( # nolint
             )
           }))
         }
-        logging::logdebug("Annotation$initialize: Calling private$initialize_annotation")
+        logging::logdebug(
+          "Annotation$initialize: Calling private$initialize_annotation"
+        )
         private$initialize_annotation(annotation, idmapping)
       } else {
-        logging::logerror("Annotation$initialize: Either 'annotation' files or 'annotation_dir' must be provided.")
+        logging::logerror(paste(
+          "Annotation$initialize: Either 'annotation' files or",
+          "'annotation_dir' must be provided."
+        ))
         stop("Initialization failed: No annotation source specified.")
       }
       self$clean_txid_versions(suffix_pattern)
@@ -179,10 +186,12 @@ Annotation <- R6::R6Class( # nolint
     #'   empty data.frame if 'from' is invalid or no data can be constructed.
     export_to_df = function(from) {
       if (!from %in% self$get_from_ids()) {
-        logging::logwarn(
-          sprintf("Annotation$export_to_df: 'from' ID type '%s' is not valid. Valid types are: %s",
-                  from, paste(self$get_from_ids(), collapse = ", "))
-        )
+        logging::logwarn(sprintf(
+          paste(
+            "Annotation$export_to_df: 'from' ID type '%s'",
+            "is not valid. Valid types are: %s"
+          ), from, paste(self$get_from_ids(), collapse = ", ")
+        ))
         return(data.frame())
       }
 
@@ -194,7 +203,9 @@ Annotation <- R6::R6Class( # nolint
           (!is.null(private$annotations[[from]][[to_name]])) &&
             (from != to_name)
         ) {
-          all_unique_from_ids <- union(all_unique_from_ids, names(private$annotations[[from]][[to_name]]))
+          all_unique_from_ids <- union(
+            all_unique_from_ids, names(private$annotations[[from]][[to_name]])
+          )
         }
       }
 
@@ -216,27 +227,28 @@ Annotation <- R6::R6Class( # nolint
       data_list[[from]] <- all_unique_from_ids
 
       if (length(to_ids) > 0) {
-          for (to_id_type in to_ids) {
-            mapping_vector <- private$annotations[[from]][[to_id_type]]
-            # Ensure mapping_vector is not NULL before subsetting
-            if (!is.null(mapping_vector)) {
-                values <- mapping_vector[all_unique_from_ids]
-                # If a to_id_type results in all NAs or is problematic, handle gracefully
-                data_list[[to_id_type]] <- values
-            } else {
-                # If a specific to_id_type has no mapping vector, fill with NAs
-                data_list[[to_id_type]] <- rep(NA, length(all_unique_from_ids))
-            }
+        for (to_id_type in to_ids) {
+          mapping_vector <- private$annotations[[from]][[to_id_type]]
+          # Ensure mapping_vector is not NULL before subsetting
+          if (!is.null(mapping_vector)) {
+            values <- mapping_vector[all_unique_from_ids]
+            # If a to_id_type results in all NAs or is problematic,
+            # handle gracefully
+            data_list[[to_id_type]] <- values
+          } else {
+            # If a specific to_id_type has no mapping vector, fill with NAs
+            data_list[[to_id_type]] <- rep(NA, length(all_unique_from_ids))
           }
+        }
       }
-      
+
       df <- as.data.frame(data_list, stringsAsFactors = FALSE)
 
       if (ncol(df) > 0 && names(df)[1] != from) {
         names(df)[1] <- from
       }
 
-      return(df)
+      df
     },
 
     #' @description
@@ -249,22 +261,34 @@ Annotation <- R6::R6Class( # nolint
     #'
     #' @param directory_path The path to the directory where CSV files
     #'   will be written. The directory will be created if it does not exist.
-    #' @return Invisibly returns TRUE if successful, or FALSE/throws error on failure.
-    #'   Logs information about files written or warnings for types with no data.
+    #' @return Invisibly returns TRUE if successful, or FALSE/throws error on
+    #' failure. Logs information about files written or warnings for types with
+    #' no data.
     write_to_directory = function(directory_path) {
-      if (missing(directory_path) || !is.character(directory_path) || length(directory_path) != 1 || nchar(directory_path) == 0) {
-        logging::logerror("Annotation$write_to_directory: 'directory_path' must be a non-empty string.")
+      if (missing(directory_path) || !is.character(directory_path) ||
+          length(directory_path) != 1 || nchar(directory_path) == 0
+      ) {
+        logging::logerror(paste(
+          "Annotation$write_to_directory: 'directory_path' must be a",
+          "non-empty string."
+        ))
         return(invisible(FALSE))
       }
 
       if (!dir.exists(directory_path)) {
-        logging::loginfo(sprintf("Annotation$write_to_directory: Creating directory: %s", directory_path))
+        logging::loginfo(sprintf(
+          "Annotation$write_to_directory: Creating directory: %s",
+          directory_path
+        ))
         dir.create(directory_path, showWarnings = FALSE, recursive = TRUE)
       }
 
       all_from_types <- self$get_from_ids()
       if (length(all_from_types) == 0) {
-        logging::logwarn("Annotation$write_to_directory: No 'from' ID types available to export.")
+        logging::logwarn(paste(
+          "Annotation$write_to_directory: No 'from' ID types available",
+          "to export."
+        ))
         return(invisible(TRUE)) # No error, but nothing to do
       }
 
@@ -272,17 +296,25 @@ Annotation <- R6::R6Class( # nolint
       for (current_from_type in all_from_types) {
         df_to_write <- self$export_to_df(current_from_type)
 
-        if (!is.null(df_to_write) && inherits(df_to_write, "data.frame") && nrow(df_to_write) > 0) {
+        if (!is.null(df_to_write) && inherits(df_to_write, "data.frame") &&
+            nrow(df_to_write) > 0
+        ) {
           file_name <- paste0(current_from_type, ".csv")
           output_path <- file.path(directory_path, file_name)
-          data.table::fwrite(df_to_write, output_path, row.names = FALSE, na = "NA")
+          data.table::fwrite(df_to_write, output_path, row.names = FALSE,
+                             na = "NA")
         } else {
           logging::logwarn(
-            sprintf("Annotation$write_to_directory: No data to write for 'from' ID type '%s'. Skipping.", current_from_type)
+            sprintf(
+              paste(
+                "Annotation$write_to_directory: No data to write for 'from' ID",
+                "type '%s'. Skipping."
+              ), current_from_type
+            )
           )
         }
       }
-      return(invisible(success_all))
+      invisible(success_all)
     },
 
     #' @description
@@ -340,14 +372,12 @@ Annotation <- R6::R6Class( # nolint
           unique(annotation$tax_id),
           fetch_id_mapping
         ))
-      }
-
-      if (is.character(idmapping) && length(idmapping) == 1) {
-        if (! file.exists(idmapping)){
-          logging::logerror("idmapping file not found")
-          stop(1)
-        }
+      } else if (is.character(idmapping)) {
+        assert_that(length(idmapping) == 1)
+        assert_that(file.exists(idmapping))
+        options(readr.show_col_types = FALSE)
         idmapping <- readr::read_delim(idmapping, delim = "\t")
+        options(readr.show_col_types = TRUE)
       }
 
       dest_vector <- c("type", "tax_id", "tax_name", "gid", "symbol")
@@ -541,7 +571,9 @@ create_uniprot_gene_id_mappings <- function(
     # If the idmapping data.table has a different number of columns, stop the execution
     stop("Uniprot mapping file not recognized")
   }
-
+  if (! data.table::is.data.table(idmapping)) {
+    idmapping <- data.table::as.data.table(idmapping)
+  }
   data.table::setnames(idmapping, cnames)
   status_levels <- c("unreviewed", "reviewed")
   idmapping[, status := factor(status, levels = status_levels)]

@@ -6,6 +6,7 @@
 #' @include class_ExprData_utils_norm.r
 #' @include class_ExprData_utils_plot.r
 #' @include class_ExprData_utils_extract.r
+#' @include class_ExprData_utils_plot_complex.r
 
 NULL
 
@@ -102,7 +103,7 @@ NULL
 #' Default is null meaning that there is no filtering.
 
 ExprData <- R6::R6Class("ExprData", # nolint
-  public <- list(
+  public = list(
 
     #' @title Show raw count summary per tax_id, tax_name and rna type for
     #' selected expressed tags
@@ -139,6 +140,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' The results will be an intersect with the previous selection.
     #' You can reset the object if it's not desired.
     #' @param values A list of values used for filtering.
+    #'   e.g c("mRNA", "transcript")
     #' @param filtered_var The variable being filtered. Possible values are
     #' - "tax_id" for filtering based on taxon id
     #' - "tax_name" for filtering based on taxon name
@@ -384,62 +386,11 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' @return Numeric matrix with normalization factors for expressed tags
     compute_norm_fact = function(in_batch = NULL, in_group = NULL,
       inter_norm = FALSE, intra_norm = TRUE) {
-
-      row_ids <- private$selected_ids
-      col_ids <- private$design$extract_sample_names(in_batch, in_group)
-
-      if (intra_norm) {
-        norm_fact <- private$intra_norm_fact[row_ids, col_ids]
-      } else {
-        norm_fact <- NULL
-      }
-
-      norm_fact_inter <- NULL
-
-      if (inter_norm) {
-        if (! is.null(private$inter_norm_fact)) {
-          if (private$inter_norm_fact_opts$norm_scale == "design") {
-            norm_fact_inter <- private$inter_norm_fact[col_ids]
-          } else {
-            if (is.null(in_batch)) {
-              logging::logerror(
-                "`in_batch` cannot be null when norm scale is not design"
-              )
-              stop()
-            }
-            if (private$inter_norm_fact_opts$norm_scale == "batch") {
-              norm_fact_inter <- private$inter_norm_fact[[in_batch]][col_ids]
-            } else {
-              if (is.null(in_group)) {
-                logging::logerror(
-                  "`in_group` cannot be null when norm scale is group"
-                )
-                stop()
-              }
-              norm_fact_inter <-
-                private$inter_norm_fact[[in_batch]][[in_group]][col_ids]
-            }
-          }
-        } else {
-          norm_fact_inter <- rep(1, length(col_ids))
-          names(norm_fact_inter) <- col_ids
-        }
-      }
-      if (! is.null(norm_fact_inter)) {
-        if (intra_norm) {
-          norm_fact <- norm_fact %*% diag(norm_fact_inter[col_ids])
-          colnames(norm_fact) <- col_ids
-        } else {
-          norm_fact <- norm_fact_inter[col_ids]
-        }
-      }
-      if (is.null(norm_fact)) {
-        logging::logerror(
-          "`intra_norm` and `inter_norm` cannot be FALSE together"
-        )
-        stop()
-      }
-      norm_fact
+      compute_norm_fact_helper(
+        private$selected_ids, private$design, private$intra_norm_fact,
+        private$inter_norm_fact, private$inter_norm_fact_opts,
+        in_batch, in_group, inter_norm, intra_norm
+      )
     },
 
     #' @description
@@ -458,22 +409,25 @@ ExprData <- R6::R6Class("ExprData", # nolint
 
     #' @description
     #' Compute the normalized expression data from raw and norm matrices.
-    #' 
+    #'
     #' **IMPORTANT**: Default is no normalization. Please use the function below
     #' beforehand.
-    #' 
     #' - "compute_and_set_intra_norm_fact"
     #' - "compute_and_set_inter_norm_fact"
     #' Note that intra normalization is always applied, however inter norm is
     #' optional. Depending on the `norm_scale` used for inter normalization,
     #' the `in_batch` argument might be mandatory.
     #' @return numeric matrix with norm counts for expressed tags
-    compute_norm = function(in_batch = NULL, in_group = NULL,
-      inter_norm = FALSE) {
-      norm_fact <-
-        self$compute_norm_fact(in_batch, in_group, inter_norm = inter_norm)
-      norm <- self$filter_and_get_raw(in_batch, in_group)
-      return(norm * norm_fact[, colnames(norm)])
+    compute_norm = function(
+      in_batch = NULL, in_group = NULL,
+      intra_norm = TRUE, inter_norm = FALSE
+    ) {
+      if (intra_norm) {
+        self$filter_and_get_raw(in_batch, in_group) *
+          self$compute_norm_fact(in_batch, in_group, inter_norm = inter_norm)
+      } else {
+        self$filter_and_get_raw(in_batch, in_group)
+      }
     },
 
     #' @description
@@ -526,34 +480,10 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #'  - sample: sample name
     #'  - total: Sum of count or normalized value
     sum_per_type_per_sample = function(intra_norm = FALSE, log2_expr = FALSE) {
-      to_type <- private$annotation$generate_translate_dict(
-        private$main_etag, "type"
+      sum_per_type_per_sample_helper(
+        private$annotation, private$main_etag, private$design, self$get_raw,
+        self$compute_norm, intra_norm, log2_expr
       )
-      format_data <- function(data) {
-        data$type <- to_type[row.names(data)]
-        temp <- tidyr::pivot_longer(
-          aggregate(. ~ type, data, sum),
-          cols = -type, names_to = "sample", values_to = "total"
-        )
-        subset(temp, total > 10)
-      }
-
-      if (intra_norm) {
-        data <- purrr::map_dfr(
-          private$design$list_batches(),
-          function(batch) {
-            format_data(as.data.frame(self$compute_norm(
-              in_batch = batch, intra_norm = intra_norm, inter_norm = FALSE
-            )))
-          }
-        )
-      } else {
-        data <- format_data(as.data.frame(self$get_raw()))
-      }
-      if (log2_expr) {
-        data$total <- log2(data$total + 2)
-      }
-      data
     },
 
     #' @description
@@ -571,54 +501,16 @@ ExprData <- R6::R6Class("ExprData", # nolint
     ) {
       data_design <-
         private$design$get_pairwise_design()[, c("batch", "group", "sample")]
-      data <- dplyr::left_join(data_design,
-        self$sum_per_type_per_sample(intra_norm = intra_norm, log2_expr),
+      data <- dplyr::left_join(
+        data_design,
+        self$sum_per_type_per_sample(
+          intra_norm = intra_norm, log2_expr = log2_expr
+        ),
         by = "sample"
-      ) %>%
-        dplyr::filter(! .data$type %in% exclude_type)
-      batch2label <- private$design$get_b_labels()
-      group2label <- private$design$get_g_labels()
-      y_label <- "Sum of expression"
-      if (log2_expr) {
-        y_label <- paste(y_label, "(log2-transformed)")
-      }
-      if (! same_scale) {
-        f_scales <- "free"
-      } else if (horizonal_bar) {
-        f_scales <- "free_y"
-      } else {
-        f_scales <- "free_x"
-      }
-      data$batch <- factor(data$batch, levels = names(batch2label))
-      data$group <- factor(data$group, levels = names(group2label))
-      g <- ggplot2::ggplot(data,
-        ggplot2::aes(.data$sample, .data$total, fill = .data$type)
-      ) +
-        ggplot2::geom_bar(stat = "identity") +
-        ggh4x::facet_nested_wrap(
-          formula("~ batch + group"),
-          nrow = length(unique(data$batch)),
-          scales = f_scales
-          ,
-          labeller = ggplot2::labeller(
-            batch = ggplot2::as_labeller(batch2label),
-            group = ggplot2::as_labeller(group2label)
-          )
-        ) +
-        ggplot2::scale_y_continuous(labels = scales::label_scientific(
-          digits = 2
-        )) +
-        ggplot2::scale_fill_brewer(palette = "BrBG") +
-        THEME_NEXOMIS +
-        ggplot2::labs(
-          fill = "RNA type",
-          x = "Samples",
-          y = y_label
-        )
-      if (horizonal_bar) {
-        g <- g + ggplot2::coord_flip()
-      }
-      g
+      )
+      plot_sum_per_type_helper(
+        data, private$design, same_scale, horizonal_bar, log2_expr, exclude_type
+      )
     },
 
     #' @description
@@ -629,6 +521,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' - "boxplot": draw a box plot (fast)
     #' - "violin": draw a violin plot (slow)
     #' - "histo": draw an hiostogram (slow)
+    #' @param tr_fn function to transform expression values before plot.
     #' @param mean_fun (Optional) Function to plot the mean per sample.
     #' Can be one of the following:
     #' * "median"
@@ -639,309 +532,33 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' * "arithmetic"
     #' @return ggplot2 graph
     plot_dist_per_sample = function(
-      intra_norm = TRUE, inter_norm = TRUE, log2_expr = TRUE,
-      geoms = c("boxplot"), mean_fun = NULL
+      intra_norm = TRUE, inter_norm = TRUE, geoms = c("boxplot"),
+      tr_fn = (function(x) log2(x + 2) - 1), mean_fun = NULL
     ) {
-
-      if (length(setdiff(geoms, c("boxplot", "violin", "histo"))) > 0) {
-        logging::logerror("unrecognized value for geoms")
-        stop()
-      }
-
-      data_design <-
-        private$design$get_pairwise_design()[, c("batch", "group", "sample")]
       data_design_batch_group <- dplyr::distinct(
         private$design$get_pairwise_design()[, c("batch", "group")]
       )
 
-      y_label <- "Expression"
-
-      if (log2_expr) {
-        y_label <- paste(y_label, "(log2-transformed)")
-      }
-      batch2label <- private$design$get_b_labels()
-      group2label <- private$design$get_g_labels()
-      get_data <- function(in_batch, in_group) {
-        data <- self$compute_norm(in_batch, in_group, inter_norm)
-        if (log2_expr) {
-          data <- log2(data + 2)
-        }
-        data <- as.data.frame(data)
-        data$batch <- in_batch
-        data$group <- in_group
-        data %>%
-          tidyr::pivot_longer(
-            ! tidyselect::all_of(c("batch", "group")),
-            names_to = "sample",
-            values_to = "value"
-          )
-      }
 
       data <- purrr::map2_dfr(
         data_design_batch_group$batch,
         data_design_batch_group$group,
-        get_data
+        function(in_batch, in_group) {
+          as.tibble(self$compute_norm(in_batch, in_group, inter_norm)) %>%
+            dplyr::mutate(batch = in_batch, batch = in_batch) %>%
+            tidyr::pivot_longer(
+              ! tidyselect::all_of(c("batch", "group")),
+              names_to = "sample", values_to = "value"
+            ) %>%
+            dplyr::mutate(value = tr_fn(value))
+        }
       )
 
-      data$batch <- factor(data$batch, levels = names(batch2label))
-      data$group <- factor(data$group, levels = names(group2label))
-
-      g <- ggplot2::ggplot(data,
-        ggplot2::aes(.data$sample, .data$value)
+      plot_dist_per_sample_helper(
+        data, private$design, geoms, mean_fun, log2_expr
       )
-      if ("violin" %in% geoms) {
-        g <- g +
-          ggplot2::geom_violin(trim = FALSE)
-      }
-      if ("boxplot" %in% geoms) {
-        g <- g +
-          ggplot2::geom_boxplot(width = 0.1)
-      }
-      if ("histo" %in% geoms) {
-        g <- g +
-          ggmulti::geom_histogram_(bins = 30, alpha = 0.5)
-      }
-      if (! is.null(mean_fun)) {
-        g <- g + ggplot2::stat_summary(
-          fun = set_mean_function(mean_fun),
-          geom = "point", shape = 21, size = 3,
-          color = "black", fill = "red"
-        )
-      }
-
-      g <- g +
-        ggh4x::facet_nested_wrap(
-          formula("~ batch + group"),
-          nrow = length(unique(data$batch)),
-          scales = "free_x",
-          labeller = ggplot2::labeller(
-            batch = ggplot2::as_labeller(batch2label),
-            group = ggplot2::as_labeller(group2label)
-          )
-        ) +
-        ggplot2::scale_y_continuous(
-          labels = scales::label_scientific(digits = 2)) +
-        THEME_NEXOMIS +
-        ggplot2::labs(
-          x = "Samples",
-          y = y_label
-        )
-      return(g)
     },
 
-    #' @description
-    #' Function to draw complex plots
-    #' @param color_palette name of the palette of color to use
-    #' @return ggplot2 graph
-    plot_complex = function(
-      plot_type, in_batch = NULL, in_group = NULL,
-      intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
-      plot_scale = "group", ggplot_mod = NULL, color_palette = "BrBg",
-      prcomp_args = list(), prcomp_autoplot_args = list(),
-      dist_method = "euclidean", hclust_method = "ward.D2", dim_reduce = NULL,
-      clust_bar_var = c(), height_main = 10, width_main = 4,
-      include_ctrl_at_group_scale = FALSE,
-      tags = NULL, tag_type = NULL, df_design_filter = NULL
-    ) {
-
-      if (is.null(tag_type)) {
-        dict_ids <- private$selected_ids
-        names(dict_ids) <- dict_ids
-      } else {
-        dict_ids <- private$annotation$generate_translate_dict(
-          private$main_etag,
-          tag_type
-        )
-      }
-
-      if (is.null(tags)) {
-        selected_ids <- names(dict_ids)
-      } else {
-        selected_ids <- names(dict_ids)[dict_ids %in% tags]
-      }
-
-      selected_ids <- intersect(selected_ids, private$selected_ids)
-
-      if (length(selected_ids) < 3) {
-        logging::logerror("tags must have at least 3 valid choice")
-        stop()
-      }
-
-      make_plot_complex_args <- list(
-        prcomp_args = prcomp_args,
-        prcomp_autoplot_args = prcomp_autoplot_args,
-        ggplot_mod = ggplot_mod,
-        plot_type = plot_type,
-        dist_method = dist_method,
-        hclust_method = hclust_method,
-        dim_reduce = dim_reduce,
-        clust_bar_var = clust_bar_var,
-        height_main = height_main,
-        width_main = width_main,
-        color_palette = color_palette
-      )
-
-      tr_fn_df <- function(df) {
-        rn <- row.names(df)
-        cn <- colnames(df)
-        df <- tr_fn(as.matrix(df))
-        row.names(df) <- rn
-        colnames(df) <- cn
-        df
-      }
-
-      data_design <-
-        private$design$get_pairwise_design()[, c("batch", "group")] %>%
-        dplyr::distinct()
-      if (! is.null(in_batch)) {
-        data_design <- dplyr::filter(data_design,
-          .data$batch %in% in_batch)
-      }
-      if (! is.null(in_group)) {
-        data_design <- dplyr::filter(data_design,
-          .data$group %in% in_group)
-      }
-
-      if (!is.null(df_design_filter)) {
-        if (plot_scale == "batch" && (! "batch" %in% names(df_design_filter))) {
-          logging::logerror(
-            "at batch scale, df_design_filters must precise batch for filters")
-          stop()
-        } else if (plot_scale == "group" &&
-          (! all(c("batch", "group") %in% names(df_design_filter)))
-        ) {
-          logging::logerror(paste(
-            "at group scale,",
-            "df_design_filters must precise batch and group for filters"))
-          stop()
-        }
-        inner_join_cols <- c()
-        for (c_id in c("batch", "group")) {
-          if (c_id %in% names(df_design_filter)) {
-            inner_join_cols <- c(inner_join_cols, c_id)
-          }
-        }
-
-        if (length(inner_join_cols) != 0) {
-          data_design <- dplyr::inner_join(
-            data_design,
-            df_design_filter,
-            by = inner_join_cols,
-            multiple = "all",
-            suffix = c("", ".filter")
-          )[, c("batch", "group")] %>%
-            dplyr::distinct()
-        }
-      } else {
-        df_design_filter <- private$design$get_pairwise_design()
-      }
-
-      y_label <- "Expression"
-
-      if (plot_scale == "group") {
-        graphs <- purrr::map2(
-          data_design$batch,
-          data_design$group,
-          function(x, y) {
-            in_data <- self$compute_norm(x, y, inter_norm)
-            if (include_ctrl_at_group_scale) {
-              ctrl_group <- private$design$find_control_group_per_batches()[x]
-              ctrl_data <- self$compute_norm(x, ctrl_group, inter_norm)
-              in_data <- cbind(in_data, ctrl_data)
-            }
-            selected_samples <- intersect(
-              unique(dplyr::filter(df_design_filter,
-                .data$batch == .env$x & .data$group == .env$y)$sample),
-              colnames(in_data)
-            )
-            in_data <- in_data[selected_ids, selected_samples]
-            in_data <- tr_fn_df(in_data)
-            in_title <- paste(
-              private$design$get_b_labels()[x],
-              private$design$get_g_labels()[y],
-              sep = ": "
-            )
-            make_plot_complex_args$in_data <- in_data
-            make_plot_complex_args$in_title <- in_title
-            do.call(private$make_plot_complex, make_plot_complex_args)
-          }
-        )
-      } else if (plot_scale == "batch") {
-        if (inter_norm & private$inter_norm_fact_opts$norm_scale == "group") {
-          logging::logerror(paste(
-            "plot_scale=batch is not compatible with group-scale inter",
-            "normalization")
-          )
-          stop()
-        }
-        graphs <- purrr::map(
-          unique(data_design$batch),
-          function(x) {
-            if (intra_norm) {
-              data <- self$compute_norm(x, in_group, inter_norm)
-            } else {
-              data <- self$filter_and_get_raw(x, in_group)
-            }
-            selected_samples <- intersect(
-              unique(dplyr::filter(df_design_filter,
-                .data$batch == .env$x)$sample),
-              colnames(data)
-            )
-            data <- data[selected_ids, selected_samples]
-            data <- tr_fn_df(data)
-            in_title <- private$design$get_b_labels()[x]
-            make_plot_complex_args$in_data <- data
-            make_plot_complex_args$in_title <- in_title
-            n_args <- names(make_plot_complex_args$prcomp_autoplot_args)
-            if (! "colour" %in% n_args) {
-              make_plot_complex_args$prcomp_autoplot_args$colour <- "g_label"
-            }
-            do.call(private$make_plot_complex, make_plot_complex_args)
-          }
-        )
-      } else if (plot_scale == "design") {
-        if (inter_norm & private$inter_norm_fact_opts$norm_scale != "design") {
-          logging::logerror(paste(
-            "plot_scale=design is not compatible with group-scale or",
-            "batch-scale in normalization")
-          )
-          stop()
-        }
-        if (intra_norm) {
-          data <- self$compute_norm(in_batch, in_group, inter_norm)
-        } else {
-          data <- self$filter_and_get_raw(in_batch, in_group)
-        }
-        selected_samples <- intersect(
-          unique(df_design_filter$sample),
-          colnames(data)
-        )
-        data <- data[selected_ids, selected_samples]
-        data <- tr_fn_df(data)
-        in_title <- "Design"
-        make_plot_complex_args$in_data <- data
-        make_plot_complex_args$in_title <- in_title
-        n_args <- names(make_plot_complex_args$prcomp_autoplot_args)
-        if (! "colour" %in% n_args) {
-          make_plot_complex_args$prcomp_autoplot_args$colour <- "g_label"
-        }
-        if (! "shape" %in% n_args) {
-          make_plot_complex_args$prcomp_autoplot_args$shape <- "b_label"
-        }
-        graphs <-
-          list(do.call(private$make_plot_complex, make_plot_complex_args))
-      } else {
-        logging::logerror("plot_scale argument not valid")
-      }
-
-      p <- cowplot::plot_grid(
-          plotlist = graphs,
-          nrow = as.integer(sqrt(length(graphs)))
-        )
-
-      return(p)
-
-    },
 
     #' @description
     #' Get formatted data for a group with its matching control within a batch
@@ -961,20 +578,9 @@ ExprData <- R6::R6Class("ExprData", # nolint
       group_per_batches <-
         private$design$list_groups_per_batches(include_ctrl = TRUE)
 
-      if ((length(in_batch) != 1) |
-        ! (in_batch %in% names(group_per_batches))
-      ) {
-        logging::logerror(
-          "in_batch is not recognized in design")
-        stop()
-      }
-      if ((length(in_group) != 1) |
-        ! (in_group %in% group_per_batches[in_batch][[1]])
-      ) {
-        logging::logerror(
-          "in_group is not recognized in design")
-        stop()
-      }
+      assert_that(length(in_batch) == 1 && length(in_group) == 1)
+      assert_that(in_batch %in% names(group_per_batches))
+      assert_that(in_group %in% group_per_batches[in_batch][[1]])
 
       results <- list()
 
@@ -1038,6 +644,118 @@ ExprData <- R6::R6Class("ExprData", # nolint
         )
       private$selected_ids <-
         remove_id_version_suffix(private$selected_ids, suffix_pattern)
+    },
+
+    #' @description
+    #' Function to draw PCA plots
+    #' @param in_batch (optional) A character vector specifying the batch(es) to include.
+    #' @param in_group (optional) A character vector specifying the group(s) to include.
+    #' @param intra_norm A boolean indicating whether to apply intra-sample normalization.
+    #' @param inter_norm A boolean indicating whether to apply inter-sample normalization.
+    #' @param tr_fn data transformation function
+    #' @param plot_scale At which scale are the samples correlated.
+    #' @param ggplot_mod ggplot modifier that will be added to the graph.
+    #' @param color_palette name of the palette of color to use
+    #' @param prcomp_args args to be used with prcomp.
+    #' @param prcomp_autoplot_args list of argument that are used with autoplot.
+    #' @param include_ctrl_at_group_scale whether to include the controls at group scale
+    #' @param tags vector of tag ids to use for the plot
+    #' @param tag_type name of the tag type to use
+    #' @param df_design_filter data frame to filter samples
+    #' @return ggplot2 graph
+    plot_prcomp = function(
+      in_batch = NULL, in_group = NULL,
+      intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
+      plot_scale = "group", ggplot_mod = NULL, color_palette = "BrBg",
+      prcomp_args = list(), prcomp_autoplot_args = list(),
+      include_ctrl_at_group_scale = FALSE,
+      tags = NULL, tag_type = NULL, df_design_filter = NULL
+    ) {
+      private$plot_complex(
+        "prcomp", in_batch, in_group, intra_norm, inter_norm, tr_fn,
+        plot_scale, ggplot_mod, color_palette,
+        prcomp_args, prcomp_autoplot_args,
+        dist_method = NULL, hclust_method = NULL, dim_reduce = NULL,
+        clust_bar_var = NULL, height_main = NULL, width_main = NULL,
+        include_ctrl_at_group_scale,
+        tags, tag_type, df_design_filter
+      )
+    },
+
+    #' @description
+    #' Function to draw correlation plots
+    #' @param in_batch (optional) A character vector specifying the batch(es) to include.
+    #' @param in_group (optional) A character vector specifying the group(s) to include.
+    #' @param intra_norm A boolean indicating whether to apply intra-sample normalization.
+    #' @param inter_norm A boolean indicating whether to apply inter-sample normalization.
+    #' @param tr_fn data transformation function
+    #' @param plot_scale At which scale are the samples correlated.
+    #' @param ggplot_mod ggplot modifier that will be added to the graph.
+    #' @param include_ctrl_at_group_scale whether to include the controls at group scale
+    #' @param tags vector of tag ids to use for the plot
+    #' @param tag_type name of the tag type to use
+    #' @param df_design_filter data frame to filter samples
+    #' @return ggplot2 graph
+    plot_corr = function(
+      in_batch = NULL, in_group = NULL,
+      intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
+      plot_scale = "group", ggplot_mod = NULL,
+      include_ctrl_at_group_scale = FALSE,
+      tags = NULL, tag_type = NULL, df_design_filter = NULL
+    ) {
+      private$plot_complex(
+        "corr", in_batch, in_group, intra_norm, inter_norm, tr_fn,
+        plot_scale, ggplot_mod, color_palette = NULL,
+        prcomp_args = NULL, prcomp_autoplot_args = NULL,
+        dist_method = NULL, hclust_method = NULL, dim_reduce = NULL,
+        clust_bar_var = NULL, height_main = NULL, width_main = NULL,
+        include_ctrl_at_group_scale,
+        tags, tag_type, df_design_filter
+      )
+    },
+
+    #' @description
+    #' Function to draw hierarchical clustering plots
+    #' @param in_batch (optional) A character vector specifying the batch(es) to include.
+    #' @param in_group (optional) A character vector specifying the group(s) to include.
+    #' @param intra_norm A boolean indicating whether to apply intra-sample normalization.
+    #' @param inter_norm A boolean indicating whether to apply inter-sample normalization.
+    #' @param tr_fn data transformation function
+    #' @param plot_scale At which scale are the samples correlated.
+    #' @param ggplot_mod ggplot modifier that will be added to the graph.
+    #' @param color_palette name of the palette of color to use
+    #' @param dist_method distance method
+    #' @param hclust_method hierarchical clustering method
+    #' @param dim_reduce reduction before clustering
+    #' @param clust_bar_var list of variable to include as legend as a color bar
+    #' @param height_main height value for main graph
+    #' @param width_main width value for main graph
+    #' @param prcomp_args args to be used with prcomp.
+    #' @param include_ctrl_at_group_scale whether to include the controls at group scale
+    #' @param tags vector of tag ids to use for the plot
+    #' @param tag_type name of the tag type to use
+    #' @param df_design_filter data frame to filter samples
+    #' @return ggplot2 graph
+    plot_hclust = function(
+      in_batch = NULL, in_group = NULL,
+      intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
+      plot_scale = "group", ggplot_mod = NULL, color_palette = "BrBg",
+      dist_method = "euclidean", hclust_method = "ward.D2", dim_reduce = NULL,
+      clust_bar_var = c(), height_main = 10, width_main = 4,
+      prcomp_args = list(),
+      include_ctrl_at_group_scale = FALSE,
+      tags = NULL, tag_type = NULL, df_design_filter = NULL
+    ) {
+      private$plot_complex(
+        "hclust", in_batch, in_group, intra_norm, inter_norm, tr_fn,
+        plot_scale, ggplot_mod, color_palette,
+        prcomp_args = prcomp_args,
+        prcomp_autoplot_args = NULL,
+        dist_method, hclust_method, dim_reduce,
+        clust_bar_var, height_main, width_main,
+        include_ctrl_at_group_scale,
+        tags, tag_type, df_design_filter
+      )
     }
   ),
   private = list(
@@ -1069,194 +787,176 @@ ExprData <- R6::R6Class("ExprData", # nolint
     # main expression tag which is the row-nams of data frame raw, len and
     # norm_fact
     main_etag = NULL,
-    make_plot_complex = function(in_data, in_title, plot_type, ggplot_mod,
-      prcomp_args, prcomp_autoplot_args, dist_method, hclust_method, dim_reduce,
-      clust_bar_var, height_main, width_main, color_palette) {
+    plot_complex = function(
+      plot_type, in_batch = NULL, in_group = NULL,
+      intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
+      plot_scale = "group", ggplot_mod = NULL, color_palette = "BrBg",
+      prcomp_args = list(), prcomp_autoplot_args = list(),
+      dist_method = "euclidean", hclust_method = "ward.D2", dim_reduce = NULL,
+      clust_bar_var = c(), height_main = 10, width_main = 4,
+      include_ctrl_at_group_scale = FALSE,
+      tags = NULL, tag_type = NULL, df_design_filter = NULL
+    ) {
+      # Check arguments
+      plot_complex_check(
+        plot_scale,inter_norm, private$inter_norm_fact_opts, in_batch
+      )
 
-      var_base <- names(private$design$get_pairwise_design())
-      data_grouped <- private$design$get_pairwise_design() %>%
-        dplyr::filter(.data$sample %in% colnames(in_data)) %>%
-        dplyr::distinct() %>%
-        dplyr::arrange(.data$sample)
+      # Prepare tag selection
+      selected_tag_ids <- prepare_tag_selection(
+        private$main_etag, private$annotation,
+        private$selected_ids, tags, tag_type
+      )
 
-      sample_order <- unique(data_grouped[["sample"]])
+      # Prepare data based on plot scale
+      data_prep <- prepare_complex_plot_data(
+        selected_tag_ids, private$design, NULL, in_batch, in_group,
+        df_design_filter, plot_scale, include_ctrl_at_group_scale, tr_fn
+      )
 
-      data_grouped <- data_grouped %>%
-        dplyr::group_by(.data$sample)
+      data_design <- data_prep$data_design
+      df_design_filter <- data_prep$df_design_filter
 
-      data_design <- as.data.frame(purrr::map_dfc(
-        setdiff(var_base, "sample"),
-        function(x) {
-          df <- dplyr::summarise(
-            data_grouped, var = paste0(.data[[x]], collapse = ":")
-          ) %>%
-            dplyr::arrange(.data$sample)
-          df$sample <- NULL
-          names(df) <- x
-          return(df)
-        }
-      ))
+      if (plot_scale == "group") {
+        graphs <- purrr::map2(
+          data_design$batch,
+          data_design$group,
+          function(x, y) {
+            in_data <- self$compute_norm(x, y, inter_norm)
+            if (include_ctrl_at_group_scale) {
+              ctrl_group <- private$design$find_control_group_per_batches()[x]
+              ctrl_data <- self$compute_norm(x, ctrl_group, inter_norm)
+              in_data <- cbind(in_data, ctrl_data)
+            }
+            selected_samples <- intersect(
+              unique(dplyr::filter(df_design_filter,
+                .data$batch == .env$x & .data$group == .env$y)$sample),
+              colnames(in_data)
+            )
+            in_data <- in_data[selected_tag_ids, selected_samples]
+            in_title <- paste(
+              private$design$get_b_labels()[x],
+              private$design$get_g_labels()[y],
+              sep = ": "
+            )
 
-      data_design$sample <- sample_order
-
-      if (plot_type == "corr") {
-        lowerfun <- function(data, mapping) {
-          ggplot2::ggplot(data = data, mapping = mapping) +
-            ggplot2::geom_point(size = 0.5) +
-            ggplot2::geom_abline(intercept = 0, slope = 1, color = "red")
-        }
-
-        g <- GGally::ggpairs(
-          in_data,
-          lower = list(continuous = GGally::wrap(lowerfun)),
-          title = in_title
-        ) +
-        ggplot2::theme(
-          axis.text.x = ggplot2::element_blank(),
-          axis.text.y = ggplot2::element_blank()
-        ) + THEME_NEXOMIS
-        if (! is.null(ggplot_mod)) {
-          g <- g + ggplot_mod
-        }
-        return(GGally::ggmatrix_gtable(g))
-      } else if (plot_type == "prcomp") {
-        prcomp_args$x <- t(in_data)
-        pca_res <- do.call(prcomp, prcomp_args)
-        prcomp_autoplot_args$object <- pca_res
-        prcomp_autoplot_args$data <- data_design
-        g <- do.call(ggplot2::autoplot, prcomp_autoplot_args) +
-          ggplot2::ggtitle(in_title) +
-          ggplot2::scale_fill_brewer(palette = color_palette) +
-          ggplot2::scale_color_brewer(palette = color_palette) +
-          THEME_NEXOMIS +
-          ggplot2::theme(legend.position = "bottom")
-        if (! is.null(ggplot_mod)) {
-          g <- g + ggplot_mod
-        }
-        return(g)
-      } else if (plot_type == "hclust") {
-        if (is.null(dim_reduce)) {
-          d <- philentropy::distance(
-            t(in_data), method = dist_method, as.dist.obj = TRUE,
-            use.row.names = TRUE
-          )
-        } else {
-          prcomp_args$x <- t(in_data)
-          prcomp_args$rank. <- as.integer(dim_reduce)
-          pca_res <- do.call(prcomp, prcomp_args)
-          str(pca_res)
-          d <- philentropy::distance(
-            pca_res$x, method = dist_method, as.dist.obj = TRUE,
-            use.row.names = TRUE
-          )
-        }
-        hc <- hclust(d, hclust_method)
-
-        ordered_labels <- hc$labels[hc$order]
-
-        data_design$sample <- factor(
-          data_design$sample,
-          levels = ordered_labels,
-          ordered = TRUE
-        )
-
-        p1_dendro <- ggdendro::dendro_data(hc)
-        list_legs <- list()
-        list_plots <- list(
-          ggdendro::ggdendrogram(hc) +
-            ggplot2::coord_cartesian(
-              xlim = c(-1, nrow(data_design) + 1),
-              ylim = c(-1, max(p1_dendro$segments$y)),
-              expand = FALSE) +
-            ggplot2::ggtitle(in_title) +
-            THEME_NEXOMIS +
-            ggplot_mod
-        )
-        hs <- c(height_main)
-        ws <- integer()
-
-        data_design <- as.data.frame(
-          dplyr::arrange(data_design, .data$sample)
-        )
-
-        if (!identical(
-          as.character(data_design$sample),
-          as.character(ordered_labels)
-        )) {
-          print(data_design)
-          str(data_design)
-          print(hc$labels)
-          str(hc$labels)
-          print(as.character(data_design$sample))
-          print(as.character(hc$labels))
-          stop(
-            "Error: The labels in data_design and hc are not in the same order."
-          )
-        }
-
-        for (var in clust_bar_var) {
-          if (! var %in% names(data_design)) {
-            logging::logerror("var inclust_bar_var arg is not recognized")
-            stop()
+            # Dispatch to the appropriate plotting function based on plot_type
+            if (plot_type == "prcomp") {
+              create_prcomp_plot(
+                in_data, in_title,
+                private$design$get_pairwise_design() %>%
+                  dplyr::filter(.data$sample %in% colnames(in_data)) %>%
+                  dplyr::distinct(),
+                prcomp_args, prcomp_autoplot_args, ggplot_mod, color_palette
+              )
+            } else if (plot_type == "corr") {
+              create_corr_plot(in_data, in_title, ggplot_mod)
+            } else if (plot_type == "hclust") {
+              create_hclust_plot(
+                in_data, in_title,
+                private$design$get_pairwise_design() %>%
+                  dplyr::filter(.data$sample %in% colnames(in_data)) %>%
+                  dplyr::distinct(),
+                dist_method, hclust_method, dim_reduce, clust_bar_var,
+                height_main, width_main, color_palette, prcomp_args, ggplot_mod
+              )
+            }
           }
-          hs <- c(hs, 1)
-          data_design$voi <- data_design[[var]]
-          nth <- length(list_legs) + 1
-          var_plot <-
-            ggplot2::ggplot(data_design,
-              ggplot2::aes(.data$sample, y = 1, fill = .data$voi)
-            ) +
-              ggplot2::ylab(var) +
-              ggplot2::geom_tile(color = "black") + ggplot2::theme_minimal() +
-              ggplot2::coord_cartesian(
-                xlim = c(-1, nrow(data_design) + 1),
-                expand = FALSE) +
-              ggplot2::scale_fill_brewer(palette = color_palette)
-          list_legs[[nth]] <-
-            ggpubr::as_ggplot(ggpubr::get_legend(
-              var_plot +
-                ggplot2::theme(
-                  plot.margin = ggplot2::margin(0, 0, 0, 0, "cm")
-                ) +
-                ggplot2::guides(
-                  fill = ggplot2::guide_legend(title = var, ncol = 1))
-            ))
-          ws <- c(ws, 1 + length(unique(data_design[[var]])))
-          list_plots[[length(list_plots) + 1]] <- var_plot +
-              ggplot2::theme(
-                axis.title.x = ggplot2::element_blank(),
-                axis.title.y = ggplot2::element_text(
-                  angle = 0, vjust = 0.5, hjust = 1),
-                axis.ticks = ggplot2::element_blank(),
-                axis.text = ggplot2::element_blank(),
-                legend.position = "none",
-                line = ggplot2::element_blank())
-        }
-        if (length(list_legs) == 0) {
-          return(egg::ggarrange(
-            plots = list_plots,
-            ncol = 1,
-            heights = hs, draw = FALSE
-          ))
+        )
+      } else if (plot_scale == "batch") {
+        graphs <- purrr::map(
+          unique(data_design$batch),
+          function(x) {
+            if (intra_norm) {
+              data <- self$compute_norm(x, in_group, inter_norm)
+            } else {
+              data <- self$filter_and_get_raw(x, in_group)
+            }
+            selected_samples <- intersect(
+              unique(dplyr::filter(df_design_filter,
+                .data$batch == .env$x)$sample),
+              colnames(data)
+            )
+            data <- data[selected_tag_ids, selected_samples]
+            in_title <- private$design$get_b_labels()[x]
+
+            # Adjust autoplot args for batch scale
+            prcomp_autoplot_args_mod <- prcomp_autoplot_args
+            n_args <- names(prcomp_autoplot_args_mod)
+            if (! "colour" %in% n_args) {
+              prcomp_autoplot_args_mod$colour <- "g_label"
+            }
+
+            # Dispatch to the appropriate plotting function based on plot_type
+            if (plot_type == "prcomp") {
+              create_prcomp_plot(
+                data, in_title,
+                private$design$get_pairwise_design() %>%
+                  dplyr::filter(.data$sample %in% colnames(data)) %>%
+                  dplyr::distinct(),
+                prcomp_args, prcomp_autoplot_args_mod, ggplot_mod, color_palette
+              )
+            } else if (plot_type == "corr") {
+              create_corr_plot(data, in_title, ggplot_mod)
+            } else if (plot_type == "hclust") {
+              create_hclust_plot(
+                data, in_title,
+                private$design$get_pairwise_design() %>%
+                  dplyr::filter(.data$sample %in% colnames(data)) %>%
+                  dplyr::distinct(),
+                dist_method, hclust_method, dim_reduce, clust_bar_var,
+                height_main, width_main, color_palette, prcomp_args, ggplot_mod
+              )
+            }
+          }
+        )
+      } else if (plot_scale == "design") {
+        if (intra_norm) {
+          data <- self$compute_norm(in_batch, in_group, inter_norm)
         } else {
-          return(egg::ggarrange(
-            ggpubr::as_ggplot(egg::ggarrange(
-              plots = list_plots,
-              ncol = 1,
-              heights = hs, draw = FALSE
-            )),
-            ggpubr::as_ggplot(egg::ggarrange(
-              plots = list_legs,
-              ncol = 1,
-              heights = ws,
-              draw = FALSE
-            )),
-            ncol = 2,
-            widths = c(width_main, 1),
-            draw = FALSE
+          data <- self$filter_and_get_raw(in_batch, in_group)
+        }
+        selected_samples <- intersect(
+          unique(df_design_filter$sample),
+          colnames(data)
+        )
+        data <- data[selected_tag_ids, selected_samples]
+        in_title <- "Design"
+
+        # Adjust autoplot args for design scale
+        prcomp_autoplot_args_mod <- prcomp_autoplot_args
+        n_args <- names(prcomp_autoplot_args_mod)
+        if (! "colour" %in% n_args) {
+          prcomp_autoplot_args_mod$colour <- "g_label"
+        }
+        if (! "shape" %in% n_args) {
+          prcomp_autoplot_args_mod$shape <- "b_label"
+        }
+
+        # Dispatch to the appropriate plotting function based on plot_type
+        if (plot_type == "prcomp") {
+          graphs <- list(create_prcomp_plot(
+            data, in_title,
+            private$design$get_pairwise_design() %>%
+              dplyr::filter(.data$sample %in% colnames(data)) %>%
+              dplyr::distinct(),
+            prcomp_args, prcomp_autoplot_args_mod, ggplot_mod, color_palette
+          ))
+        } else if (plot_type == "corr") {
+          graphs <- list(create_corr_plot(data, in_title, ggplot_mod))
+        } else if (plot_type == "hclust") {
+          graphs <- list(create_hclust_plot(
+            data, in_title,
+            private$design$get_pairwise_design() %>%
+              dplyr::filter(.data$sample %in% colnames(data)) %>%
+              dplyr::distinct(),
+            dist_method, hclust_method, dim_reduce, clust_bar_var,
+            height_main, width_main, color_palette, prcomp_args, ggplot_mod
           ))
         }
       }
+
+      arrange_complex_plots(graphs)
     }
   )
 )
@@ -1392,8 +1092,8 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
     ) {
       logging::basicConfig(log_level)
 
-      private$design <- design
-      private$annotation <- annotation
+      private$design <- design$clone()
+      private$annotation <- annotation$clone()
       private$at_gene_level <- FALSE
       private$intra_norm_fact_method <- "none"
       private$inter_norm_fact_opts <- NULL
@@ -1416,12 +1116,6 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
 
       if (format == "kallisto") {
 
-        if (!requireNamespace("rhdf5", quietly = TRUE)) {
-          logging::logerror(paste("reading kallisto results from hdf5 files",
-          "requires Bioconductor package `rhdf5`"))
-          stop()
-        }
-
         private$raw <- NULL
         private$selected_ids <- NULL
 
@@ -1430,32 +1124,31 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
           fpath <- files[[sample_name]]
           ids <- as.character(rhdf5::h5read(fpath, "aux/ids"))
 
-          if (is.null(private$selected_ids)) {
+          # Check for duplicates in ids
+          assert_that(!any(duplicated(ids)))
 
+          if (is.null(private$selected_ids)) {
             private$selected_ids <- ids
             private$raw <- matrix(1, nrow = length(ids),
-              ncol = length(files))
+                                  ncol = length(files))
             rownames(private$raw) <- ids
             colnames(private$raw) <- names(files)
             private$len <- private$raw
             slug_ids <- digest::digest(sort(ids))
-
-
           } else {
-
-            if (digest::digest(sort(ids)) != slug_ids) {
-              logging::logerror(paste("The are transcript ids mismatch",
-                "between samples"))
-              stop()
-            }
-
+            assert_that(digest::digest(sort(ids)) == slug_ids)
           }
 
-          private$raw[ids, sample_name] <- rhdf5::h5read(fpath, "est_counts")
+          # Read counts and verify dimensions before assignment
+          counts <- rhdf5::h5read(fpath, "est_counts")
+          assert_that(length(counts) == length(ids))
+
+          private$raw[ids, sample_name] <- counts
 
           if (! with_fixed_length) {
-            private$len[ids, sample_name] <- rhdf5::h5read(fpath,
-              "aux/eff_lengths")
+            lengths <- rhdf5::h5read(fpath, "aux/eff_lengths")
+            assert_that(length(lengths) == length(ids))
+            private$len[ids, sample_name] <- lengths
           }
         }
 

@@ -60,11 +60,11 @@ show_etags_summary("raw")
 \item \href{#method-ExprData-sum_per_type_per_sample}{\code{ExprData$sum_per_type_per_sample()}}
 \item \href{#method-ExprData-plot_sum_per_type_per_sample}{\code{ExprData$plot_sum_per_type_per_sample()}}
 \item \href{#method-ExprData-plot_dist_per_sample}{\code{ExprData$plot_dist_per_sample()}}
-\item \href{#method-ExprData-plot_complex}{\code{ExprData$plot_complex()}}
-\item \href{#method-ExprData-plot_prcomp}{\code{ExprData$plot_prcomp()}}
-\item \href{#method-ExprData-plot_corr}{\code{ExprData$plot_corr()}}
 \item \href{#method-ExprData-extract_pairwise_data_with_design}{\code{ExprData$extract_pairwise_data_with_design()}}
 \item \href{#method-ExprData-clean_id_versions}{\code{ExprData$clean_id_versions()}}
+\item \href{#method-ExprData-plot_prcomp}{\code{ExprData$plot_prcomp()}}
+\item \href{#method-ExprData-plot_corr}{\code{ExprData$plot_corr()}}
+\item \href{#method-ExprData-plot_hclust}{\code{ExprData$plot_hclust()}}
 \item \href{#method-ExprData-clone}{\code{ExprData$clone()}}
 }
 }
@@ -125,7 +125,8 @@ You can reset the object if it's not desired.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{values}}{A list of values used for filtering.}
+\item{\code{values}}{A list of values used for filtering.
+e.g c("mRNA", "transcript")}
 
 \item{\code{filtered_var}}{The variable being filtered. Possible values are
 \itemize{
@@ -371,8 +372,7 @@ Get normalization factors matrix
   in_batch = NULL,
   in_group = NULL,
   inter_norm = FALSE,
-  intra_norm = TRUE,
-  include_ctrl = FALSE
+  intra_norm = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -390,10 +390,6 @@ normalization.}
 
 \item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
 normalization.}
-
-\item{\code{include_ctrl}}{A boolean indicating whether to include the control
-group. This argument is only valid when specifying only one argument for
-'in_group' and 'in_batch'.}
 }
 \if{html}{\out{</div>}}
 }
@@ -446,8 +442,8 @@ the \code{in_batch} argument might be mandatory.
 \if{html}{\out{<div class="r">}}\preformatted{ExprData$compute_norm(
   in_batch = NULL,
   in_group = NULL,
-  inter_norm = FALSE,
-  include_ctrl = FALSE
+  intra_norm = TRUE,
+  inter_norm = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -460,12 +456,11 @@ include.}
 \item{\code{in_group}}{(optional) A character vector specifying the group(s) to
 include.}
 
-\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
+\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
 normalization.}
 
-\item{\code{include_ctrl}}{A boolean indicating whether to include the control
-group. This argument is only valid when specifying only one argument for
-'in_group' and 'in_batch'.}
+\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
+normalization.}
 }
 \if{html}{\out{</div>}}
 }
@@ -623,8 +618,8 @@ sample.
 \if{html}{\out{<div class="r">}}\preformatted{ExprData$plot_dist_per_sample(
   intra_norm = TRUE,
   inter_norm = TRUE,
-  log2_expr = TRUE,
   geoms = c("boxplot"),
+  tr_fn = (function(x) log2(x + 2) - 1),
   mean_fun = NULL
 )}\if{html}{\out{</div>}}
 }
@@ -638,9 +633,6 @@ normalization.}
 \item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
 normalization.}
 
-\item{\code{log2_expr}}{A boolean indicating whether to use the log2(x+2)
-transformation for expression data.}
-
 \item{\code{geoms}}{Character vector, types of plot to draw, can be a
 combination of:
 \itemize{
@@ -648,6 +640,8 @@ combination of:
 \item "violin": draw a violin plot (slow)
 \item "histo": draw an hiostogram (slow)
 }}
+
+\item{\code{tr_fn}}{function to transform expression values before plot.}
 
 \item{\code{mean_fun}}{(Optional) Function to plot the mean per sample.
 Can be one of the following:
@@ -667,334 +661,12 @@ ggplot2 graph
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-ExprData-plot_complex"></a>}}
-\if{latex}{\out{\hypertarget{method-ExprData-plot_complex}{}}}
-\subsection{Method \code{plot_complex()}}{
-Function to draw complex plots
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ExprData$plot_complex(
-  plot_type,
-  in_batch = NULL,
-  in_group = NULL,
-  intra_norm = TRUE,
-  inter_norm = TRUE,
-  tr_fn = (function(x) log2(x + 2)),
-  plot_scale = "group",
-  ggplot_mod = NULL,
-  color_palettes = c("Set1", "Set2", "Set3", "Pastel1", "Pastel2", "Paired", "Dark2",
-    "Accent"),
-  prcomp_args = list(),
-  prcomp_autoplot_args = list(),
-  dist_method = "euclidean",
-  hclust_method = "ward.D2",
-  dim_reduce = NULL,
-  clust_bar_var = c(),
-  height_main = 10,
-  width_main = 4,
-  include_ctrl_at_group_scale = FALSE,
-  tags = NULL,
-  tag_type = NULL,
-  df_design_filter = NULL
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{plot_type}}{plot type
-\itemize{
-\item "prcomp" PCA analysis
-\item "corr" correlation analysis
-\item "hclust"
-}}
-
-\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to
-include.}
-
-\item{\code{in_group}}{(optional) A character vector specifying the group(s) to
-include.}
-
-\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
-normalization.}
-
-\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
-normalization.}
-
-\item{\code{tr_fn}}{data transformation function}
-
-\item{\code{plot_scale}}{At which scale are the samples correlated. There are 3
-possible option:
-\itemize{
-\item "design": all samples are compared together
-\item "batch": all samples are compared together within batch
-\item "group": all samples are compared together within group including ctrl
-Note that with inter_scale=TRUE there might be cases where it is
-not compatible with the scale inf inter norm.
-(see compute_and_set_inter_norm)
-}}
-
-\item{\code{ggplot_mod}}{ggplot modifier that will be added to the graph that
-are later arranged.}
-
-\item{\code{color_palettes}}{name of the palette of color to use for plot in the
-order of variable added.}
-
-\item{\code{prcomp_args}}{args to be used with prcomp. It is used for the
-the following value of plot_type:
-\itemize{
-\item prcomp
-\item hclust when dim_reduce is not null
-}}
-
-\item{\code{prcomp_autoplot_args}}{list of argument that are used with autoplot
-to plot the prcomp object (see ggfortify autoplot.pca_common). Note that
-the design is given as data therefore the variable defined in the design
-can be used.}
-
-\item{\code{dist_method}}{distand method, see dist function}
-
-\item{\code{hclust_method}}{hierarchical clustering method (see hclust function)}
-
-\item{\code{dim_reduce}}{reduction before clustering (not yet implemented)}
-
-\item{\code{clust_bar_var}}{list of variable to include as legend as a color bar}
-
-\item{\code{height_main}}{height value for main graph when combined vertically
-with others. Others heights will be set to 1. Note that there can be more
-than 1 others graphs. Used in the following plot_type:
-\itemize{
-\item hclust
-}}
-
-\item{\code{width_main}}{width value for main graph when combined horizontically
-with others. Others widths will be set to 1. Note that there can be more
-than 1 others graphs.
-\itemize{
-\item hclust
-}}
-
-\item{\code{include_ctrl_at_group_scale}}{whether to include the controls at
-group scale}
-
-\item{\code{tags}}{vector of tag ids to use for the plot}
-
-\item{\code{tag_type}}{name of the tag type to use:
-\itemize{
-\item uniprot
-\item symbol
-\item type
-\item tax_id (taxonomy)
-\item tax_name (taxonomy)
-if null, then the default id will be used (typed gene id at gene level
-and transcript id at transcript level)
-}}
-
-\item{\code{df_design_filter}}{data frame to filter samples based on their name
-and eventually their batch and/or group depending on the plot_scale.
-\itemize{
-\item if plot_scale = "design", expected column is "sample_name"
-\item if plot_scale = "batch", expected columns are "sample_name" & "batch"
-\item if plot_scale = "group", expected columns are "sample_name" & "batch" &
-"code"
-Note that unexpected columns will be ignored.
-Default is null meaning that there is no filtering.
-}}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-ggplot2 graph
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-ExprData-plot_prcomp"></a>}}
-\if{latex}{\out{\hypertarget{method-ExprData-plot_prcomp}{}}}
-\subsection{Method \code{plot_prcomp()}}{
-plot principal components
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ExprData$plot_prcomp(
-  in_batch = NULL,
-  in_group = NULL,
-  intra_norm = TRUE,
-  inter_norm = TRUE,
-  tr_fn = (function(x) log2(x + 2)),
-  plot_scale = "group",
-  ggplot_mod = NULL,
-  prcomp_args = list(),
-  prcomp_autoplot_args = list(),
-  include_ctrl_at_group_scale = FALSE,
-  tags = NULL,
-  tag_type = NULL,
-  df_design_filter = NULL
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to
-include.}
-
-\item{\code{in_group}}{(optional) A character vector specifying the group(s) to
-include.}
-
-\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
-normalization.}
-
-\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
-normalization.}
-
-\item{\code{tr_fn}}{data transformation function}
-
-\item{\code{plot_scale}}{At which scale are the samples correlated. There are 3
-possible option:
-\itemize{
-\item "design": all samples are compared together
-\item "batch": all samples are compared together within batch
-\item "group": all samples are compared together within group including ctrl
-Note that with inter_scale=TRUE there might be cases where it is
-not compatible with the scale inf inter norm.
-(see compute_and_set_inter_norm)
-}}
-
-\item{\code{ggplot_mod}}{ggplot modifier that will be added to the graph that
-are later arranged.}
-
-\item{\code{prcomp_args}}{args to be used with prcomp. It is used for the
-the following value of plot_type:
-\itemize{
-\item prcomp
-\item hclust when dim_reduce is not null
-}}
-
-\item{\code{prcomp_autoplot_args}}{list of argument that are used with autoplot
-to plot the prcomp object (see ggfortify autoplot.pca_common). Note that
-the design is given as data therefore the variable defined in the design
-can be used.}
-
-\item{\code{include_ctrl_at_group_scale}}{whether to include the controls at
-group scale}
-
-\item{\code{tags}}{vector of tag ids to use for the plot}
-
-\item{\code{tag_type}}{name of the tag type to use:
-\itemize{
-\item uniprot
-\item symbol
-\item type
-\item tax_id (taxonomy)
-\item tax_name (taxonomy)
-if null, then the default id will be used (typed gene id at gene level
-and transcript id at transcript level)
-}}
-
-\item{\code{df_design_filter}}{data frame to filter samples based on their name
-and eventually their batch and/or group depending on the plot_scale.
-\itemize{
-\item if plot_scale = "design", expected column is "sample_name"
-\item if plot_scale = "batch", expected columns are "sample_name" & "batch"
-\item if plot_scale = "group", expected columns are "sample_name" & "batch" &
-"code"
-Note that unexpected columns will be ignored.
-Default is null meaning that there is no filtering.
-}}
-}
-\if{html}{\out{</div>}}
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-ExprData-plot_corr"></a>}}
-\if{latex}{\out{\hypertarget{method-ExprData-plot_corr}{}}}
-\subsection{Method \code{plot_corr()}}{
-plot correlations
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ExprData$plot_corr(
-  in_batch = NULL,
-  in_group = NULL,
-  intra_norm = TRUE,
-  inter_norm = TRUE,
-  tr_fn = (function(x) log2(x + 2)),
-  plot_scale = "group",
-  ggplot_mod = NULL,
-  include_ctrl_at_group_scale = FALSE,
-  tags = NULL,
-  tag_type = NULL,
-  df_design_filter = NULL
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to
-include.}
-
-\item{\code{in_group}}{(optional) A character vector specifying the group(s) to
-include.}
-
-\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
-normalization.}
-
-\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
-normalization.}
-
-\item{\code{tr_fn}}{data transformation function}
-
-\item{\code{plot_scale}}{At which scale are the samples correlated. There are 3
-possible option:
-\itemize{
-\item "design": all samples are compared together
-\item "batch": all samples are compared together within batch
-\item "group": all samples are compared together within group including ctrl
-Note that with inter_scale=TRUE there might be cases where it is
-not compatible with the scale inf inter norm.
-(see compute_and_set_inter_norm)
-}}
-
-\item{\code{ggplot_mod}}{ggplot modifier that will be added to the graph that
-are later arranged.}
-
-\item{\code{include_ctrl_at_group_scale}}{whether to include the controls at
-group scale}
-
-\item{\code{tags}}{vector of tag ids to use for the plot}
-
-\item{\code{tag_type}}{name of the tag type to use:
-\itemize{
-\item uniprot
-\item symbol
-\item type
-\item tax_id (taxonomy)
-\item tax_name (taxonomy)
-if null, then the default id will be used (typed gene id at gene level
-and transcript id at transcript level)
-}}
-
-\item{\code{df_design_filter}}{data frame to filter samples based on their name
-and eventually their batch and/or group depending on the plot_scale.
-\itemize{
-\item if plot_scale = "design", expected column is "sample_name"
-\item if plot_scale = "batch", expected columns are "sample_name" & "batch"
-\item if plot_scale = "group", expected columns are "sample_name" & "batch" &
-"code"
-Note that unexpected columns will be ignored.
-Default is null meaning that there is no filtering.
-}}
-}
-\if{html}{\out{</div>}}
-}
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ExprData-extract_pairwise_data_with_design"></a>}}
 \if{latex}{\out{\hypertarget{method-ExprData-extract_pairwise_data_with_design}{}}}
 \subsection{Method \code{extract_pairwise_data_with_design()}}{
 Get formatted data for a group with its matching control within a batch
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ExprData$extract_pairwise_data_with_design(
-  in_batch,
-  in_group,
-  include_ctrl = TRUE
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{ExprData$extract_pairwise_data_with_design(in_batch, in_group)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -1005,10 +677,6 @@ include.}
 
 \item{\code{in_group}}{(optional) A character vector specifying the group(s) to
 include.}
-
-\item{\code{include_ctrl}}{A boolean indicating whether to include the control
-group. This argument is only valid when specifying only one argument for
-'in_group' and 'in_batch'.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1050,6 +718,195 @@ suffix. Default is \code{"-\\\\d+$"}. If \code{NULL}, \code{FALSE}, or an empty 
 no cleaning is performed.}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ExprData-plot_prcomp"></a>}}
+\if{latex}{\out{\hypertarget{method-ExprData-plot_prcomp}{}}}
+\subsection{Method \code{plot_prcomp()}}{
+Function to draw PCA plots
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ExprData$plot_prcomp(
+  in_batch = NULL,
+  in_group = NULL,
+  intra_norm = TRUE,
+  inter_norm = TRUE,
+  tr_fn = (function(x) log2(x + 2)),
+  plot_scale = "group",
+  ggplot_mod = NULL,
+  color_palette = "BrBg",
+  prcomp_args = list(),
+  prcomp_autoplot_args = list(),
+  include_ctrl_at_group_scale = FALSE,
+  tags = NULL,
+  tag_type = NULL,
+  df_design_filter = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to include.}
+
+\item{\code{in_group}}{(optional) A character vector specifying the group(s) to include.}
+
+\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample normalization.}
+
+\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample normalization.}
+
+\item{\code{tr_fn}}{data transformation function}
+
+\item{\code{plot_scale}}{At which scale are the samples correlated.}
+
+\item{\code{ggplot_mod}}{ggplot modifier that will be added to the graph.}
+
+\item{\code{color_palette}}{name of the palette of color to use}
+
+\item{\code{prcomp_args}}{args to be used with prcomp.}
+
+\item{\code{prcomp_autoplot_args}}{list of argument that are used with autoplot.}
+
+\item{\code{include_ctrl_at_group_scale}}{whether to include the controls at group scale}
+
+\item{\code{tags}}{vector of tag ids to use for the plot}
+
+\item{\code{tag_type}}{name of the tag type to use}
+
+\item{\code{df_design_filter}}{data frame to filter samples}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+ggplot2 graph
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ExprData-plot_corr"></a>}}
+\if{latex}{\out{\hypertarget{method-ExprData-plot_corr}{}}}
+\subsection{Method \code{plot_corr()}}{
+Function to draw correlation plots
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ExprData$plot_corr(
+  in_batch = NULL,
+  in_group = NULL,
+  intra_norm = TRUE,
+  inter_norm = TRUE,
+  tr_fn = (function(x) log2(x + 2)),
+  plot_scale = "group",
+  ggplot_mod = NULL,
+  include_ctrl_at_group_scale = FALSE,
+  tags = NULL,
+  tag_type = NULL,
+  df_design_filter = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to include.}
+
+\item{\code{in_group}}{(optional) A character vector specifying the group(s) to include.}
+
+\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample normalization.}
+
+\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample normalization.}
+
+\item{\code{tr_fn}}{data transformation function}
+
+\item{\code{plot_scale}}{At which scale are the samples correlated.}
+
+\item{\code{ggplot_mod}}{ggplot modifier that will be added to the graph.}
+
+\item{\code{include_ctrl_at_group_scale}}{whether to include the controls at group scale}
+
+\item{\code{tags}}{vector of tag ids to use for the plot}
+
+\item{\code{tag_type}}{name of the tag type to use}
+
+\item{\code{df_design_filter}}{data frame to filter samples}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+ggplot2 graph
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ExprData-plot_hclust"></a>}}
+\if{latex}{\out{\hypertarget{method-ExprData-plot_hclust}{}}}
+\subsection{Method \code{plot_hclust()}}{
+Function to draw hierarchical clustering plots
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ExprData$plot_hclust(
+  in_batch = NULL,
+  in_group = NULL,
+  intra_norm = TRUE,
+  inter_norm = TRUE,
+  tr_fn = (function(x) log2(x + 2)),
+  plot_scale = "group",
+  ggplot_mod = NULL,
+  color_palette = "BrBg",
+  dist_method = "euclidean",
+  hclust_method = "ward.D2",
+  dim_reduce = NULL,
+  clust_bar_var = c(),
+  height_main = 10,
+  width_main = 4,
+  prcomp_args = list(),
+  include_ctrl_at_group_scale = FALSE,
+  tags = NULL,
+  tag_type = NULL,
+  df_design_filter = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to include.}
+
+\item{\code{in_group}}{(optional) A character vector specifying the group(s) to include.}
+
+\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample normalization.}
+
+\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample normalization.}
+
+\item{\code{tr_fn}}{data transformation function}
+
+\item{\code{plot_scale}}{At which scale are the samples correlated.}
+
+\item{\code{ggplot_mod}}{ggplot modifier that will be added to the graph.}
+
+\item{\code{color_palette}}{name of the palette of color to use}
+
+\item{\code{dist_method}}{distance method}
+
+\item{\code{hclust_method}}{hierarchical clustering method}
+
+\item{\code{dim_reduce}}{reduction before clustering}
+
+\item{\code{clust_bar_var}}{list of variable to include as legend as a color bar}
+
+\item{\code{height_main}}{height value for main graph}
+
+\item{\code{width_main}}{width value for main graph}
+
+\item{\code{prcomp_args}}{args to be used with prcomp.}
+
+\item{\code{include_ctrl_at_group_scale}}{whether to include the controls at group scale}
+
+\item{\code{tags}}{vector of tag ids to use for the plot}
+
+\item{\code{tag_type}}{name of the tag type to use}
+
+\item{\code{df_design_filter}}{data frame to filter samples}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+ggplot2 graph
 }
 }
 \if{html}{\out{<hr>}}

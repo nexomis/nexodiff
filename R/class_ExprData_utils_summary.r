@@ -1,3 +1,7 @@
+#' @include nexodiff-package.R
+#' @include utils.r
+NULL
+
 #' Helper function for ExprData$show_etags_summary
 #'
 #' @param selected_ids private$selected_ids (see ExprData)
@@ -45,24 +49,42 @@ summarize_etags <- function(
 #'
 #' @param annotation private$annotation (see ExprData)
 #' @param main_etag private$main_etag (see ExprData)
-#' @param data_matrix expression data matrix (raw or normalized)
+#' @param design private$design (see ExprData)
+#' @param get_raw_data_callback A function to get the raw data
+#' @param compute_norm_callback A function to compute the normalized data
+#' @param intra_norm see ExprData$sum_per_type_per_sample
 #' @param log2_expr see ExprData$sum_per_type_per_sample
 #' @return data frame with counts with columns type, sample, total
-summarize_per_type <- function(
-  annotation, main_etag, data_matrix, log2_expr = FALSE
+sum_per_type_per_sample_helper <- function(
+  annotation, main_etag, design, get_raw_data_callback,
+  compute_norm_callback, intra_norm = FALSE, log2_expr = FALSE
 ) {
-  to_type <- annotation$generate_translate_dict(main_etag, "type")
-
-  data <- as.data.frame(data_matrix)
-  data$type <- to_type[row.names(data)]
-  temp <- tidyr::pivot_longer(
-    aggregate(. ~ type, data, sum),
-    cols = -type, names_to = "sample", values_to = "total"
+  to_type <- annotation$generate_translate_dict(
+    main_etag, "type"
   )
-  result <- subset(temp, total > 10)
-
-  if (log2_expr) {
-    result$total <- log2(result$total + 2)
+  format_data <- function(data) {
+    data$type <- to_type[row.names(data)]
+    temp <- tidyr::pivot_longer(
+      aggregate(. ~ type, data, sum),
+      cols = -type, names_to = "sample", values_to = "total"
+    )
+    subset(temp, total > 10)
   }
-  result
+
+  if (intra_norm) {
+    data <- purrr::map_dfr(
+      design$list_batches(),
+      function(batch) {
+        format_data(as.data.frame(compute_norm_callback(
+          in_batch = batch, intra_norm = intra_norm, inter_norm = FALSE
+        )))
+      }
+    )
+  } else {
+    data <- format_data(as.data.frame(get_raw_data_callback()))
+  }
+  if (log2_expr) {
+    data$total <- log2(data$total + 2)
+  }
+  data
 }

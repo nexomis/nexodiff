@@ -29,15 +29,15 @@ RUN export DEBIAN_FRONTEND=noninteractive \
   && echo ".library <- \"${R_HOME}/site-library\"" >> $R_PROFILE
 
 RUN export DEBIAN_FRONTEND=noninteractive \
-  apt-get update && apt-get install -y \
+  && apt-get update && apt-get install -y \
   libcurl4-openssl-dev \
   libssl-dev \
   libxml2-dev \
-  && wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.7.30/quarto-1.7.30-linux-amd64.deb
-  && dpkg -i quarto-1.7.30-linux-amd64.deb 
+  && wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.7.30/quarto-1.7.30-linux-amd64.deb \
+  && dpkg -i quarto-1.7.30-linux-amd64.deb  \
   && rm -rf /var/lib/apt/lists/*
 
-COPY install.r requirements.txt /root/
+COPY install.r requirements.txt requirements.dev.txt /root/
 
-RUN Rscript /root/install.r /root/requirements.txt
-
+RUN Rscript /root/install.r /root/requirements.txt \
+  && Rscript /root/install.r /root/requirements.dev.txt

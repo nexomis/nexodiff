@@ -1,4 +1,5 @@
 apeglm
+assertthat
 circlize
 cowplot
 DESeq2

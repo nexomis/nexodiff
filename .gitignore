@@ -5,6 +5,7 @@ nexodiff.Rproj
 .Rproj.user
 **.swp
 **.Rproj.user
+/.vscode
 
 # ignore build files
 inst/doc
@@ -66,6 +67,7 @@ test/out_dir
 /_trash
 /.clinerules
 /coverage_report.html
+/*cov-report.html
 
 /*refactor.md
 

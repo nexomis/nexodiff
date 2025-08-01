@@ -1,3 +1,7 @@
+#' @include nexodiff-package.R
+#' @include utils.r
+NULL
+
 #' Helper function for ExprData$extract_pairwise_data_with_design
 #'
 #' @param design private$design (see ExprData)

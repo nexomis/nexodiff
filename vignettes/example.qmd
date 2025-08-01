@@ -3,17 +3,12 @@ title: "Basic Example for using nexodiff"
 format:
   html:
     code-fold: show
+    embed-resources: true
 execute:
   cache: true
-knitr:
-  opts_chunk:
-    collapse: true
-    message: false
-    warning: false
-    echo: true
-    fig.show: "asis"
-    R.options:
-      knitr.graphics.auto_pdf: true
+  eval: true
+  output: asis
+  warnings: false
 ---
 
 This vignette provides a practical walkthrough of the core functionalities of
@@ -122,9 +117,10 @@ containing the expression files.
 #| label: design
 # Example: Initializing from a CSV design file and specifying 
 # the source directory
+ena_datasets_path = "../tests/testthat/fixtures/integration/ena_datasets"
 design <- nexodiff::PairwiseDesign$new(
-  "../tests/ena_datasets/ERX1492351_design.csv",
-  src_dir = "../tests/ena_datasets/ERX1492351_out/kallisto/"
+  paste(ena_datasets_path, "ERX1492351_design.csv", sep = "/"),
+  src_dir = paste(ena_datasets_path, "ERX1492351_out/kallisto", sep = "/")
 )
 ```
 
@@ -413,6 +409,19 @@ Plots statistical significance (-log10 p-value) versus log2 fold change. Helps i
 pairwise_deseq2$plot_vulcano(
   lfc_abs_lim = 1,      # LFC threshold for coloring/lines
   min_signif = 0.05,    # Significance threshold for coloring/lines
+  use_padj = TRUE,
+)
+```
+
+```{r}
+#| label: plot_volcano_labels
+# Example: Volcano plot for a specific comparison
+pairwise_deseq2$plot_vulcano(
+  lfc_abs_lim = 1,      # LFC threshold for coloring/lines
+  min_signif = 0.05,    # Significance threshold for coloring/lines
+  select_ids = pairwise_deseq2$generate_a_list(in_batch = "batch1", in_group ="test", id = "uniprot")[1:10],
+  tag_id_select = "uniprot",
+  tag_id_show = "uniprot",
   use_padj = TRUE,
 )
 ```

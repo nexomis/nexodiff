@@ -9,9 +9,11 @@ vignette: >
 
 ## 1. Pairwise design format
 
-This format is used by `nexodiff::SampleInfo`
+This format is used by `nexodiff::PairwiseDesign` class.
 
-The Pairwise design records all the samples with the experimental design and data filefile location. There is 2 format possible. Most of the functionalities are onbly allowed using the YML format.
+The Pairwise design records all the samples with the experimental design and 
+data filefile location. There is 2 format possible. Most of the functionalities
+are only allowed using the YML format.
 
 In a normal samplesheet data file are expected to be kallisto output using h5 format. 
 

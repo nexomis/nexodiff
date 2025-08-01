@@ -1,3 +1,7 @@
+#' @include nexodiff-package.R
+#' @include utils.r
+NULL
+
 #' Helper function to set mean function based on method name
 #'
 #' @param method_name Method name for mean calculation
@@ -215,4 +219,78 @@ inter_norm_check <- function(
     logging::logwarn("The number of core asked was more than available")
   }
 
+}
+
+#' Helper function for ExprData$compute_norm_fact
+#'
+#' @param selected_ids private$selected_ids (see ExprData)
+#' @param design private$design (see ExprData)
+#' @param intra_norm_fact private$intra_norm_fact (see ExprData)
+#' @param inter_norm_fact private$inter_norm_fact (see ExprData)
+#' @param inter_norm_fact_opts private$inter_norm_fact_opts (see ExprData)
+#' @param in_batch see ExprData$compute_norm_fact
+#' @param in_group see ExprData$compute_norm_fact
+#' @param inter_norm see ExprData$compute_norm_fact
+#' @param intra_norm see ExprData$compute_norm_fact
+#' @return normalization factor matrix
+compute_norm_fact_helper <- function(
+  selected_ids, design, intra_norm_fact, inter_norm_fact,
+  inter_norm_fact_opts, in_batch = NULL, in_group = NULL,
+  inter_norm = FALSE, intra_norm = TRUE
+) {
+  row_ids <- selected_ids
+  col_ids <- design$extract_sample_names(in_batch, in_group)
+
+  if (intra_norm) {
+    norm_fact <- intra_norm_fact[row_ids, col_ids]
+  } else {
+    norm_fact <- NULL
+  }
+
+  norm_fact_inter <- NULL
+
+  if (inter_norm) {
+    if (!is.null(inter_norm_fact)) {
+      if (inter_norm_fact_opts$norm_scale == "design") {
+        norm_fact_inter <- inter_norm_fact[col_ids]
+      } else {
+        if (is.null(in_batch)) {
+          logging::logerror(
+            "`in_batch` cannot be null when norm scale is not design"
+          )
+          stop()
+        }
+        if (inter_norm_fact_opts$norm_scale == "batch") {
+          norm_fact_inter <- inter_norm_fact[[in_batch]][col_ids]
+        } else {
+          if (is.null(in_group)) {
+            logging::logerror(
+              "`in_group` cannot be null when norm scale is group"
+            )
+            stop()
+          }
+          norm_fact_inter <-
+            inter_norm_fact[[in_batch]][[in_group]][col_ids]
+        }
+      }
+    } else {
+      norm_fact_inter <- rep(1, length(col_ids))
+      names(norm_fact_inter) <- col_ids
+    }
+  }
+  if (!is.null(norm_fact_inter)) {
+    if (intra_norm) {
+      norm_fact <- norm_fact %*% diag(norm_fact_inter[col_ids])
+      colnames(norm_fact) <- col_ids
+    } else {
+      norm_fact <- norm_fact_inter[col_ids]
+    }
+  }
+  if (is.null(norm_fact)) {
+    logging::logerror(
+      "`intra_norm` and `inter_norm` cannot be FALSE together"
+    )
+    stop()
+  }
+  norm_fact
 }
