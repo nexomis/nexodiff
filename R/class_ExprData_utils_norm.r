@@ -31,9 +31,27 @@ set_mean_function <- function(method_name) {
 #' @param ref_vector reference expression vector
 #' @param mean_fun mean function
 #' @return normalization factors
-calc_norm_fac <- function(tgt_vector, ref_vector, norm_mean_fun) {
+calc_norm_fac <- function(tgt_vector, ref_vector, norm_mean_fun,
+                          trim_extreme) {
   keep_row <- !(tgt_vector == 0 & ref_vector == 0)
   ratios <- tgt_vector[keep_row] / ref_vector[keep_row]
+
+  if (trim_extreme && (any(is.infinite(ratios)) || any(ratios == 0))) {
+    n_inf <- sum(is.infinite(ratios))
+    n_zero <- sum(ratios == 0)
+    n_trim <- max(n_inf, n_zero)
+
+    if (n_trim > 0 && length(ratios) > 2 * n_trim) {
+      sorted_ratios <- sort(ratios)
+      ratios <- sorted_ratios[(n_trim + 1):(length(sorted_ratios) - n_trim)]
+    } else if (n_trim > 0) {
+      logging::logerror(
+        "Cannot trim extreme values: insufficient data points, returning 1"
+      )
+      stop()
+    }
+  }
+
   norm_mean_fun(ratios)
 }
 
@@ -49,7 +67,7 @@ calc_norm_fac <- function(tgt_vector, ref_vector, norm_mean_fun) {
 #' @param grouped_samples grouped samples
 main_calc_norm_fac <- function(
   mat, ref_mat, ref_mean_fun, norm_mean_fun, tgt_mean_fun,
-  a_mean_fun, a_trim_value, m_trim_prop, grouped_samples
+  a_mean_fun, a_trim_value, m_trim_prop, grouped_samples, trim_extreme
 ) {
   # get reference
   assert_that(nrow(mat) == nrow(ref_mat))
@@ -73,7 +91,7 @@ main_calc_norm_fac <- function(
         trimmed_ref <- trimmed_ref[trimmed_ids]
       }
       setNames(rep(calc_norm_fac(
-        tgt_vec, trimmed_ref, norm_mean_fun
+        tgt_vec, trimmed_ref, norm_mean_fun, trim_extreme
       ), length(grouped_samples[[i]])), grouped_samples[[i]])
     }
   ))
@@ -166,7 +184,7 @@ get_trimmed_ids <- function(
 #' @return inter norm fact matrix
 compute_inter_norm <- function(
   raw, norm_fact, ref_type, ref_samples, design, norm_scale, norm_by, ref_mean,
-  norm_mean, tgt_mean, a_mean, a_trim_value, m_trim_prop
+  norm_mean, tgt_mean, a_mean, a_trim_value, m_trim_prop, trim_extreme = FALSE
 ) {
   ref_mean_fun <- set_mean_function(ref_mean)
   norm_mean_fun <- set_mean_function(norm_mean)
@@ -198,7 +216,8 @@ compute_inter_norm <- function(
       )
       main_calc_norm_fac(
         mat, mat[, ref_ids, drop = FALSE], ref_mean_fun, norm_mean_fun,
-        tgt_mean_fun, a_mean_fun, a_trim_value, m_trim_prop, grouped_samples
+        tgt_mean_fun, a_mean_fun, a_trim_value, m_trim_prop, grouped_samples,
+        trim_extreme
       )
     },
     batch = {
@@ -225,7 +244,7 @@ compute_inter_norm <- function(
           main_calc_norm_fac(
             mat[, tgt_ids, drop = FALSE], mat[, ref_ids, drop = FALSE],
             ref_mean_fun, norm_mean_fun, tgt_mean_fun, a_mean_fun,
-            a_trim_value, m_trim_prop, grouped_samples
+            a_trim_value, m_trim_prop, grouped_samples, trim_extreme
           )
         }
       ), batches)
@@ -258,7 +277,7 @@ compute_inter_norm <- function(
               main_calc_norm_fac(
                 mat[, tgt_ids, drop = FALSE], mat[, ref_ids, drop = FALSE],
                 ref_mean_fun, norm_mean_fun, tgt_mean_fun, a_mean_fun,
-                a_trim_value, m_trim_prop, grouped_samples
+                a_trim_value, m_trim_prop, grouped_samples, trim_extreme
               )
             }
           ), batch2groups[[batch]])

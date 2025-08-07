@@ -217,19 +217,32 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' reference. See `ref_mean` for possible values.
     #' @param tgt_mean Method for the mean of gene expression between target
     #' samples prior to the calculation of M and A vector.
+    #' @param a_mean Method for the mean of gene expression between target and
+    #' reference samples for the calculation of A vector.
+    #' @param a_trim_value Value for trimming the A vector.
+    #' @param m_trim_prop Proportion of values to trim from the M vector.
+    #' @param trim_extreme Whether to trim extreme values from the M vector,
+    #' before calculating the mean. If the mean function `norm_mean` is not
+    #' "median", extreme values will causes issues with the calculation of the
+    #' mean.
+    #' @details TODO: add details:
+    #' - explain the processus citing the args using `args`
+    #' - explain what is the M and A vector
+    #' - explain the triming processus (order)
+    #' - explain anything that might be usefull.
     compute_and_set_inter_norm_fact <- function( # nolint: object_length_linter.
       norm_scale = "group", norm_by = "sample",
       ref_type = "all", ref_samples = NULL,
       ref_mean = "mod.geometric", norm_mean = "median",
       tgt_mean = "mod.geometric", a_mean = "mod.geometric", a_trim_value = 1,
-      m_trim_prop = 0
+      m_trim_prop = 0, trim_extreme = FALSE
     ) {
 
       private$inter_norm_fact <- compute_inter_norm(
         private$raw, private$intra_norm_fact,
         ref_type, ref_samples, private$design, norm_scale, norm_by,
         ref_mean, norm_mean, tgt_mean, a_mean,
-        a_trim_value, m_trim_prop
+        a_trim_value, m_trim_prop, trim_extreme
       )
 
       private$inter_norm_fact_opts <- list(
@@ -239,12 +252,12 @@ ExprData <- R6::R6Class("ExprData", # nolint
         ref_samples = ref_samples,
         ref_mean = ref_mean,
         norm_mean = norm_mean,
-        m_trim_prop = m_trim_prop,
         tgt_mean = tgt_mean,
         a_mean = a_mean,
-        a_trim_value = a_trim_value
+        a_trim_value = a_trim_value,
+        m_trim_prop = m_trim_prop,
+        trim_extreme = trim_extreme
       )
-
     },
 
     #' @description
