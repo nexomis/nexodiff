@@ -20,7 +20,7 @@ set_mean_function <- function(method_name) {
     rfun <- mean
   } else {
     logging::logerror("Unrecognized mean function method")
-    stop()
+    stop(1)
   }
   rfun
 }
@@ -46,9 +46,9 @@ calc_norm_fac <- function(tgt_vector, ref_vector, norm_mean_fun,
       ratios <- sorted_ratios[(n_trim + 1):(length(sorted_ratios) - n_trim)]
     } else if (n_trim > 0) {
       logging::logerror(
-        "Cannot trim extreme values: insufficient data points, returning 1"
+        "Cannot trim extreme values: insufficient data points"
       )
-      stop()
+      stop(1)
     }
   }
 
@@ -71,7 +71,7 @@ main_calc_norm_fac <- function(
 ) {
   # get reference
   assert_that(nrow(mat) == nrow(ref_mat))
-  ref_vector <- apply_mean_over_rows(ref_mat, ref_mean_fun)
+  ref_vector <- apply(ref_mat, 1, ref_mean_fun)
   # get ref trimmed ids
   unlist(purrr::map(
     seq_along(grouped_samples),
@@ -80,7 +80,7 @@ main_calc_norm_fac <- function(
       if (length(grouped_samples[[i]]) == 1) {
         tgt_vec <- tgt_mat[, 1]
       } else {
-        tgt_vec <- apply_mean_over_rows(tgt_mat, tgt_mean_fun)
+        tgt_vec <- apply(tgt_mat, 1, tgt_mean_fun)
       }
       trimmed_ref <- ref_vector
       if (a_trim_value != 0 || m_trim_prop != 0) {
@@ -129,17 +129,6 @@ get_reference_ids <- function(
   )
 }
 
-#' Helper function to get reference for normalization
-#'
-#' @param mat expression matrix (norm or not)
-#' @param mean_fun mean function for calculation
-#' @return reference values
-apply_mean_over_rows <- function(mat, mean_fun) {
-  unlist(lapply(seq(1, nrow(mat)), function(i) {
-    mean_fun(mat[i, ])
-  }))
-}
-
 #' Helper function to get trimmed ids
 #' @param trim_ref reference expression vector
 #' @param trim_grp expression vector
@@ -149,9 +138,10 @@ apply_mean_over_rows <- function(mat, mean_fun) {
 get_trimmed_ids <- function(
   trim_ref, trim_grp, mean_fun, a_trim_value, m_trim_prop
 ) {
+  assert_that(! is.null(names(trim_ref)))
   if (a_trim_value > 0) {
-    a_vector <- apply_mean_over_rows(
-      matrix(c(trim_ref, trim_grp), byrow = FALSE, ncol = 2), mean_fun
+    a_vector <- apply(
+      matrix(c(trim_ref, trim_grp), byrow = FALSE, ncol = 2), 1, mean_fun
     )
     ids <- names(a_vector[a_vector > a_trim_value])
   } else {
@@ -161,10 +151,11 @@ get_trimmed_ids <- function(
     assert_that(m_trim_prop < 0.5)
     ratios <- trim_grp[ids] / trim_ref[ids]
     n_trim <- floor(length(ids) * m_trim_prop)
-    names(ratios)[order(ratios)][(n_trim + 1):(length(ratios) - n_trim)]
-  } else {
-    ids
+    ordered_ids <-
+      names(ratios)[order(ratios)][(n_trim + 1):(length(ratios) - n_trim)]
+    ids <- ids[ids %in% ordered_ids]
   }
+  ids
 }
 
 #' Helper function to do inter normalization
@@ -343,8 +334,8 @@ compute_intra_norm_factor <- function(
   } else if (method == "none") {
     intra_norm_fact[selected_ids, ][] <- 1
   } else {
-    logging::logdebug("Unrecognized normalization method")
-    stop()
+    logging::logerror("Unrecognized normalization method")
+    stop(1)
   }
 
   # There will be NaN value where colSums(raw_matrix) or
@@ -392,7 +383,7 @@ compute_norm_fact_helper <- function(
           logging::logerror(
             "`in_batch` cannot be null when norm scale is not design"
           )
-          stop()
+          stop(1)
         }
         if (inter_norm_fact_opts$norm_scale == "batch") {
           norm_fact_inter <- inter_norm_fact[[in_batch]][col_ids]
@@ -401,7 +392,7 @@ compute_norm_fact_helper <- function(
             logging::logerror(
               "`in_group` cannot be null when norm scale is group"
             )
-            stop()
+            stop(1)
           }
           norm_fact_inter <-
             inter_norm_fact[[in_batch]][[in_group]][col_ids]
@@ -423,7 +414,7 @@ compute_norm_fact_helper <- function(
     logging::logerror(
       "`intra_norm` and `inter_norm` cannot be FALSE together"
     )
-    stop()
+    stop(1)
   }
   norm_fact
 }
