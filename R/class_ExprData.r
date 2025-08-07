@@ -137,6 +137,30 @@ ExprData <- R6::R6Class("ExprData", # nolint
       )
     },
 
+    #' @title Plot results from show_etags_summary.
+    #' @param tr_fn A function to transform the expression values before
+    #' summarizing. Default is identity function (no transformation).
+    #' @param sum_fn A function to aggregate the transformed values. Default
+    #' is "sum", but can be "sum_fn = function(x) sum(as.integer(x > 0))"
+    #' to count non zero genes for example.
+    #' @param intra_norm A boolean indicating whether to apply intra-sample
+    #' normalization. Only used when type="norm".
+    #' @param inter_norm A boolean indicating whether to apply inter-sample
+    #' normalization. Only used when type="norm".
+    #' @return A list of tables per feature
+    #' @examples
+    #' show_etags_summary()
+    #' show_etags_summary(intra_norm=TRUE)
+    plot_etags_summary = function(
+      in_batch = NULL, tr_fn = NULL, sum_fn = sum,
+      intra_norm = FALSE, inter_norm = FALSE
+    ) {
+
+      results <- self$show_etags_summary(in_batch, tr_fn, sum_fn, intra_norm,
+                                         inter_norm)
+      plot_summarized_etags(results, private$design)
+    },
+
     #' @description
     #' Select expressed tags based on filtering on taxon or rna type.
     #' The results will be an intersect with the previous selection.
@@ -162,160 +186,63 @@ ExprData <- R6::R6Class("ExprData", # nolint
     },
 
     #' @description
-    #' Compute and set inter normalization factors with extensible
-    #' parametrization. Please be aware that this function is designed to handle
-    #'  various normalization methods, including median and TMM. However, at the
-    #'  time of implementation, only the median method has been thoroughly
-    #' tested. Other methods such as TMM might not produce accurate results and
-    #' should be used with caution.
-    #' @param method Normalization method to use:
-    #'   * "none" apply no normalization
-    #'   * "median" apply median ratio normalization
-    #'   * "tmm" apply trimmed mean of median normalization
-    #' TODO: add litterature reference for each
+    #' Compute and set inter normalization factors
     #' @param norm_scale Scale to apply the normalization:
     #' - "design" for all samples in one go
     #' - "batch" for applying norm_factors per batch
     #' - "group" for applying norm factors per batch per group.
-    #' @param norm_by Where to apply the normalization factor:
-    #' - "samples" for the sample level
-    #' - "group" for the group level (not implemented).
-    #' The normalized can be computed for each sample or can be computed based
-    #' on the mean expression within a group.
-    #' @param norm_ref Sample(s) to use as reference for normalization:
-    #' - "all" for all samples
-    #' - "ctrl" for control samples (not tested and not compatible with scale
-    #' design)
-    #' - character vector with sample names (not tested)
-    #' - integer vector with sample rank in expression matrix (not tested).
-    #' @param norm_ref_mean Method for the mean of gene expression between
-    #' samples of the reference. Possible options are given for `m_trim_mean`.
-    #' @param m_trim_prop Proportion of expression ratio (M-value) to trim at
-    #' both tails (only for TMM).
-    #' @param m_trim_mean Method for the mean of gene expression ratios in the
-    #' TMM method to compute the normalization factor. Possible options are:
+    #' The scale will have an impact on the reference selection if ref type is
+    #' "ctrl" or "all". In consequences the same sample can be associated with
+    #' different scaling factor if it appears in different batch/group.
+    #' Therefore data normalized at the "batch" or "group" level can not be
+    #' analyzed at the design level. (and group scale not at the batch level
+    #' either). Indeed at group/batch levels the inter_norm can only be applied
+    #' at group/batch level.
+    #' @param norm_by level by which M and A vector are computed followed by.
+    #' the scaling factor for normalization.
+    #' @param ref_type Type of reference samples to use for normalization.
+    #' - "all" for using all samples as reference
+    #' - "ctrl" for using only control samples as reference
+    #' - "specified" for using specific samples `ref_samples` as reference
+    #' @param ref_samples Samples to use as reference for normalization.
+    #' @param ref_mean Method for the mean of gene expression between samples of
+    #' the reference.
     #' - "median"
     #' - "geometric"
     #' - "nz.geometric" geometric without zero
     #' - "mod.geometric" modified geometric with epsilon = 1e-05
     #' (see https://arxiv.org/abs/1806.06403)
     #' - "arithmetic"
-    #' @param a_trim_mean Method for the mean of gene expression between all
-    #' samples. Possible options are given for `m_trim_mean`.
-    #' @param a_trim_norm Whether to use (intra) normalized value to trim based
-    #' on mean gene expression (only FALSE tested).
-    #' @param ncpus Number of cpus to use for computation (default = 1)
-    #' @param a_trim_value Threshold value to trim genes from the calculation of
-    #' the normalization factors based on mean gene expression (A-value).
-    #' @param replace_zero_by Replace all zero raw count by the given value.
-    compute_and_set_inter_norm_fact = function(
-      method = "median", norm_scale = "group", norm_by = "sample",
-      norm_ref = "all", norm_ref_mean = "mod.geometric", m_trim_prop = 0.3,
-      m_trim_mean = "mod.geometric", a_trim_value = 0.5, a_trim_norm = FALSE,
-      a_trim_mean = "mod.geometric", replace_zero_by = 0, ncpus = 1
+    #' @param norm_mean Method for the mean of ratios between the target and the
+    #' reference. See `ref_mean` for possible values.
+    #' @param tgt_mean Method for the mean of gene expression between target
+    #' samples prior to the calculation of M and A vector.
+    compute_and_set_inter_norm_fact <- function( # nolint: object_length_linter.
+      norm_scale = "group", norm_by = "sample",
+      ref_type = "all", ref_samples = NULL,
+      ref_mean = "mod.geometric", norm_mean = "median",
+      tgt_mean = "mod.geometric", a_mean = "mod.geometric", a_trim_value = 1,
+      m_trim_prop = 0
     ) {
 
-      do.call(inter_norm_check, as.list(match.call()[-1]))
-
-      norm_ref_mean_fun <- set_mean_function(norm_ref_mean)
-      a_trim_mean_fun <- set_mean_function(a_trim_mean)
-      m_trim_mean_fun <- set_mean_function(m_trim_mean)
-
-      if (method == "median") {
-        calc_norm_fact <- calc_norm_fact_median
-      } else if (method == "tmm") {
-        logging::logerror("TMM method is not implemented yet")
-        stop()
-      }
-
-      if (ncpus == 1) {
-        future::plan(strategy = future::sequential)
-      } else if (parallelly::supportsMulticore()) {
-        future::plan(
-          strategy = future::multicore,
-          workers = min(ncpus, max(1, parallelly::availableCores() - 1))
-        )
-      } else {
-        future::plan(
-          strategy = future::multisession,
-          workers = min(ncpus, max(1, parallelly::availableCores() - 1))
-        )
-      }
-
-      if (norm_scale == "group") {
-        map_base <- dplyr::distinct(private$design$get_pairwise_design(
-        )[, c("batch", "group")])
-        tmp <- furrr::future_map2(
-          map_base$batch,
-          map_base$group,
-          function(batch, group) {
-            res <- self$extract_pairwise_data_with_design(batch, group)
-            # here we only use intra_norm !
-            norm <- get_trimmed_mat(
-              res$raw, res$intra_norm_fact, a_trim_norm,
-              a_trim_value, a_trim_mean_fun, replace_zero_by
-            )
-            sample_ref <-
-              get_reference(norm, res$ctrl_samples, norm_ref, norm_ref_mean_fun)
-            calc_norm_fact(norm, sample_ref)
-          }
-        )
-        names(tmp) <- paste(map_base$batch, map_base$group, sep = "")
-        private$inter_norm_fact <- list()
-
-        for (batch in private$design$list_batches()) {
-          private$inter_norm_fact[[batch]] <- list()
-          for (group in private$design$list_groups_per_batches(
-            include_ctrl = TRUE)[[batch]]) {
-            private$inter_norm_fact[[batch]][[group]] <-
-              tmp[[paste(batch, group, sep = "")]]
-          }
-        }
-
-        names(private$inter_norm_fact) <- private$design$list_batches()
-        for (batch in private$design$list_batches()) {
-          names(private$inter_norm_fact[[batch]]) <-
-            private$design$list_groups_per_batches(include_ctrl = TRUE)[[batch]]
-        }
-      } else if (norm_scale == "batch") {
-        private$inter_norm_fact <- furrr::future_map(
-          private$design$list_batches(),
-          function(batch) {
-            norm <- get_trimmed_mat(
-              self$filter_and_get_raw(batch), self$compute_norm_fact(batch),
-              a_trim_norm, a_trim_value, a_trim_mean_fun, replace_zero_by
-            )
-            sample_ref <- get_reference(
-              norm, private$design$find_control_group_per_batches()[batch],
-              norm_ref, norm_ref_mean_fun
-            )
-            calc_norm_fact(norm, sample_ref)
-          }
-        )
-        names(private$inter_norm_fact) <- private$design$list_batches()
-      } else if (norm_scale == "design") {
-        norm <- get_trimmed_mat(
-          self$get_raw(), self$compute_norm_fact(),
-          a_trim_norm, a_trim_value, a_trim_mean_fun, replace_zero_by
-        )
-        sample_ref <- get_reference(norm, NULL, norm_ref, norm_ref_mean_fun)
-        private$inter_norm_fact <-  calc_norm_fact(norm, sample_ref)
-      }
-
-      future::plan(future::sequential)
+      private$inter_norm_fact <- compute_inter_norm(
+        private$raw, private$intra_norm_fact,
+        ref_type, ref_samples, private$design, norm_scale, norm_by,
+        ref_mean, norm_mean, tgt_mean, a_mean,
+        a_trim_value, m_trim_prop
+      )
 
       private$inter_norm_fact_opts <- list(
-        method = method,
         norm_scale = norm_scale,
         norm_by = norm_by,
-        norm_ref = norm_ref,
-        norm_ref_mean = norm_ref_mean,
+        ref_type = ref_type,
+        ref_samples = ref_samples,
+        ref_mean = ref_mean,
+        norm_mean = norm_mean,
         m_trim_prop = m_trim_prop,
-        m_trim_mean = m_trim_mean,
-        a_trim_value = a_trim_value,
-        a_trim_norm = a_trim_norm,
-        a_trim_mean = a_trim_mean,
-        replace_zero_by = replace_zero_by
+        tgt_mean = tgt_mean,
+        a_mean = a_mean,
+        a_trim_value = a_trim_value
       )
 
     },
@@ -473,46 +400,6 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' @return `Annotation` object
     get_annotation = function() {
       private$annotation
-    },
-
-    #' @description
-    #' Get sum of count or normalized value per rna type
-    #' @return data frame with counts with colums
-    #'  - type: RNA type
-    #'  - sample: sample name
-    #'  - total: Sum of count or normalized value
-    sum_per_type_per_sample = function(intra_norm = FALSE, log2_expr = FALSE) {
-      sum_per_type_per_sample_helper(
-        private$annotation, private$main_etag, private$design, self$get_raw,
-        self$compute_norm, intra_norm, log2_expr
-      )
-    },
-
-    #' @description
-    #' plot sum of count or intra-normalized values per rna type (Inter norm is
-    #' not available for this)
-    #' @param same_scale whether to represent the scale with the same
-    #' @param exclude_type character vector with the rne type to exclude from
-    #' the graph
-    #' @param horizonal_bar whether the bar in the plot are horizontal rather
-    #' than vertical
-    #' @return ggplot2 graph
-    plot_sum_per_type_per_sample = function(
-      intra_norm = FALSE, exclude_type = c(), same_scale = TRUE,
-      horizonal_bar = TRUE, log2_expr = FALSE
-    ) {
-      data_design <-
-        private$design$get_pairwise_design()[, c("batch", "group", "sample")]
-      data <- dplyr::left_join(
-        data_design,
-        self$sum_per_type_per_sample(
-          intra_norm = intra_norm, log2_expr = log2_expr
-        ),
-        by = "sample"
-      )
-      plot_sum_per_type_helper(
-        data, private$design, same_scale, horizonal_bar, log2_expr, exclude_type
-      )
     },
 
     #' @description

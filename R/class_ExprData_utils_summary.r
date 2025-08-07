@@ -39,44 +39,51 @@ summarize_etags <- function(
 
 #' Helper function for ExprData$sum_per_type_per_sample
 #'
-#' @param annotation private$annotation (see ExprData)
-#' @param main_etag private$main_etag (see ExprData)
-#' @param design private$design (see ExprData)
-#' @param get_raw_data_callback A function to get the raw data
-#' @param compute_norm_callback A function to compute the normalized data
-#' @param intra_norm see ExprData$sum_per_type_per_sample
-#' @param log2_expr see ExprData$sum_per_type_per_sample
-#' @return data frame with counts with columns type, sample, total
-sum_per_type_per_sample_helper <- function(
-  annotation, main_etag, design, get_raw_data_callback,
-  compute_norm_callback, intra_norm = FALSE, log2_expr = FALSE
-) {
-  to_type <- annotation$generate_translate_dict(
-    main_etag, "type"
-  )
-  format_data <- function(data) {
-    data$type <- to_type[row.names(data)]
-    temp <- tidyr::pivot_longer(
-      aggregate(. ~ type, data, sum),
-      cols = -type, names_to = "sample", values_to = "total"
-    )
-    subset(temp, total > 10)
-  }
-
-  if (intra_norm) {
-    data <- purrr::map_dfr(
-      design$list_batches(),
-      function(batch) {
-        format_data(as.data.frame(compute_norm_callback(
-          in_batch = batch, intra_norm = intra_norm, inter_norm = FALSE
-        )))
-      }
-    )
-  } else {
-    data <- format_data(as.data.frame(get_raw_data_callback()))
-  }
-  if (log2_expr) {
-    data$total <- log2(data$total + 2)
-  }
-  data
+#' @param results see summarize_etags
+#' @param design private$design
+#' @return list of plots
+plot_summarized_etags <- function(results, design) {
+  data_design <-
+    design$get_pairwise_design()[, c("batch", "group", "sample")]
+  batch2label <- design$get_b_labels()
+  group2label <- design$get_g_labels()
+  tlabels <- c("Taxonomy ID", "Taxonomy", "RNA Type")
+  names(tlabels) <- c("tax_id", "tax_name", "type")
+  purrr::map(
+    names(results),
+    function(in_type) {
+      data <- dplyr::mutate(
+        results[[in_type]], type = row.names(results[[in_type]])
+      ) %>%
+        tidyr::pivot_longer(
+          tidyselect::all_of(names(results[[in_type]])), names_to = "sample"
+        ) %>%
+        dplyr::right_join(data_design, by = "sample")
+      ggplot2::ggplot(data,
+        ggplot2::aes(.data$sample, .data$value, fill = .data$type)
+      ) +
+        ggplot2::geom_bar(stat = "identity") +
+        ggh4x::facet_nested_wrap(
+          formula("~ batch + group"),
+          nrow = length(unique(batch2label)),
+          scales = "free_x"
+          ,
+          labeller = ggplot2::labeller(
+            batch = ggplot2::as_labeller(batch2label),
+            group = ggplot2::as_labeller(group2label)
+          )
+        ) +
+        ggplot2::scale_y_continuous(
+          labels = scales::label_scientific(digits = 2)
+        ) +
+        ggplot2::scale_fill_brewer(palette = "BrBG") +
+        THEME_NEXOMIS +
+        ggplot2::labs(
+          fill = tlabels[in_type],
+          x = "Samples",
+          y = "Expression Values"
+        )
+    }
+  ) %>%
+    purrr::set_names(names(results))
 }

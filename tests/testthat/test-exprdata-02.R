@@ -185,3 +185,11 @@ testthat::test_that("summary values are ok", {
     "human"
   )
 })
+
+testthat::test_that("summary plots are ok", {
+  expr_data_tx$reset()
+  plots <- expr_data_tx$plot_etags_summary()
+  vdiffr::expect_doppelganger("Taxonomy ID summary plot", plots[["tax_id"]])
+  vdiffr::expect_doppelganger("Taxonomy Name summary plot", plots[["tax_name"]])
+  vdiffr::expect_doppelganger("RNA type summary plot", plots[["type"]])
+})

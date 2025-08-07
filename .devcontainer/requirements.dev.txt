@@ -1,3 +1,4 @@
+diffviewer
 languageserver
 roxygen2
 testthat

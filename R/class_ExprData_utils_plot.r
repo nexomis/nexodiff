@@ -2,67 +2,6 @@
 #' @include utils.r
 NULL
 
-#' Helper function for ExprData$plot_sum_per_type_per_sample
-#'
-#' @param data data frame with columns: batch, group, sample, type, total
-#' @param design private$design see ExprData
-#' @param same_scale see ExprData$plot_sum_per_type_per_sample
-#' @param horizontal_bar see ExprData$plot_sum_per_type_per_sample
-#' @param log2_expr see ExprData$plot_sum_per_type_per_sample
-#' @param exclude_type see ExprData$plot_sum_per_type_per_sample
-#' @return ggplot2 graph
-plot_sum_per_type_helper <- function(
-  data, design, same_scale = TRUE,
-  horizontal_bar = TRUE, log2_expr = FALSE, exclude_type = c()
-) {
-  batch2label <- design$get_b_labels()
-  group2label <- design$get_g_labels()
-
-  data <- dplyr::filter(data, ! .data$type %in% exclude_type)
-
-  y_label <- "Sum of expression"
-  if (log2_expr) {
-    y_label <- paste(y_label, "(log2-transformed)")
-  }
-  if (! same_scale) {
-    f_scales <- "free"
-  } else if (horizontal_bar) {
-    f_scales <- "free_y"
-  } else {
-    f_scales <- "free_x"
-  }
-  data$batch <- factor(data$batch, levels = names(batch2label))
-  data$group <- factor(data$group, levels = names(group2label))
-  g <- ggplot2::ggplot(data,
-    ggplot2::aes(.data$sample, .data$total, fill = .data$type)
-  ) +
-    ggplot2::geom_bar(stat = "identity") +
-    ggh4x::facet_nested_wrap(
-      formula("~ batch + group"),
-      nrow = length(unique(data$batch)),
-      scales = f_scales
-      ,
-      labeller = ggplot2::labeller(
-        batch = ggplot2::as_labeller(batch2label),
-        group = ggplot2::as_labeller(group2label)
-      )
-    ) +
-    ggplot2::scale_y_continuous(
-      labels = scales::label_scientific(digits = 2)
-    ) +
-    ggplot2::scale_fill_brewer(palette = "BrBG") +
-    THEME_NEXOMIS +
-    ggplot2::labs(
-      fill = "RNA type",
-      x = "Samples",
-      y = y_label
-    )
-  if (horizontal_bar) {
-    g <- g + ggplot2::coord_flip()
-  }
-  g
-}
-
 #' Helper function for ExprData$plot_dist_per_sample
 #'
 #' @param data data frame with columns: batch, group, sample, value

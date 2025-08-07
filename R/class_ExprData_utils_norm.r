@@ -27,71 +27,248 @@ set_mean_function <- function(method_name) {
 
 #' Helper function for median normalization factor calculation
 #'
-#' @param norm normalized matrix
-#' @param sample_ref reference sample values
+#' @param tgt_vector target expression vector
+#' @param ref_vector reference expression vector
+#' @param mean_fun mean function
 #' @return normalization factors
-calc_norm_fact_median <- function(norm, sample_ref) {
-  # filter out when sample_ref = 0
-  keep_row <- sample_ref != 0
-  norm <- norm[keep_row, ] / sample_ref[keep_row]
-  norm_fact <- 1 / matrixStats::colMedians(norm)
-  names(norm_fact) <- colnames(norm)
-  norm_fact
+calc_norm_fac <- function(tgt_vector, ref_vector, norm_mean_fun) {
+  keep_row <- !(tgt_vector == 0 & ref_vector == 0)
+  ratios <- tgt_vector[keep_row] / ref_vector[keep_row]
+  norm_mean_fun(ratios)
+}
+
+#' Main helper function for normalization factor calculation
+#' @param mat expression matrix
+#' @param ref_mat reference expression matrix
+#' @param ref_mean_fun mean function for reference
+#' @param norm_mean_fun mean function for normalization
+#' @param tgt_mean_fun mean function for target
+#' @param a_mean_fun mean function for A vector
+#' @param a_trim_value trim value for A vector
+#' @param m_trim_prop trim proportion for M vector
+#' @param grouped_samples grouped samples
+main_calc_norm_fac <- function(
+  mat, ref_mat, ref_mean_fun, norm_mean_fun, tgt_mean_fun,
+  a_mean_fun, a_trim_value, m_trim_prop, grouped_samples
+) {
+  # get reference
+  assert_that(nrow(mat) == nrow(ref_mat))
+  ref_vector <- apply_mean_over_rows(ref_mat, ref_mean_fun)
+  # get ref trimmed ids
+  unlist(purrr::map(
+    seq_along(grouped_samples),
+    function(i) {
+      tgt_mat <- mat[, grouped_samples[[i]], drop = FALSE]
+      if (length(grouped_samples[[i]]) == 1) {
+        tgt_vec <- tgt_mat[, 1]
+      } else {
+        tgt_vec <- apply_mean_over_rows(tgt_mat, tgt_mean_fun)
+      }
+      trimmed_ref <- ref_vector
+      if (a_trim_value != 0 || m_trim_prop != 0) {
+        trimmed_ids <- get_trimmed_ids(
+          ref_vector, tgt_vec, a_mean_fun, a_trim_value, m_trim_prop
+        )
+        tgt_vec <- tgt_vec[trimmed_ids]
+        trimmed_ref <- trimmed_ref[trimmed_ids]
+      }
+      setNames(rep(calc_norm_fac(
+        tgt_vec, trimmed_ref, norm_mean_fun
+      ), length(grouped_samples[[i]])), grouped_samples[[i]])
+    }
+  ))
+}
+
+#' Helper function to get reference ids
+#' @param ids possible sample ids
+#' @param ctrl_samples control sample ids
+#' @param ref_type type of reference
+#' - "all": use all samples as reference
+#' - "ctrl": use control samples as reference
+#' - "specified": use specified samples as reference
+#' @param ref_samples specified reference samples
+get_reference_ids <- function(
+  ids,
+  ctrl_samples,
+  ref_type = c("all", "ctrl", "specified"),
+  ref_samples = NULL
+) {
+  ref_type <- match.arg(ref_type)
+  switch(
+    ref_type,
+    all = ids,
+    ctrl = ctrl_samples,
+    specified = {
+      assert_that(!is.null(ref_samples))
+      if (is.numeric(ref_samples)) {
+        assert_that(all(ref_samples %in% seq_along(ids)))
+        ref_samples <- ids[ref_samples]
+      } else {
+        assert_that(all(ref_samples %in% ids))
+        ref_samples
+      }
+    }
+  )
 }
 
 #' Helper function to get reference for normalization
 #'
-#' @param norm normalized matrix
-#' @param ctrl_samples control sample names
-#' @param norm_ref reference specification
-#' @param norm_ref_mean_fun mean function for reference calculation
+#' @param mat expression matrix (norm or not)
+#' @param mean_fun mean function for calculation
 #' @return reference values
-get_reference <- function(norm, ctrl_samples, norm_ref, norm_ref_mean_fun) {
-  if (all(norm_ref == "all")) {
-    norm_ref_samples <- colnames(norm)
-  } else if (all(norm_ref == "ctrl")) {
-    norm_ref_samples <- ctrl_samples
-  } else if (all(norm_ref %in% colnames(norm)) |
-    all(norm_ref %in% seq_len(ncol(norm)))
-  ) {
-    norm_ref_samples <- norm_ref
-  } else {
-    logging::logerror("`norm_ref` argument not recognized")
-    stop()
-  }
-  norm_ref_values <- unlist(lapply(seq(1, nrow(norm)), function(i) {
-    norm_ref_mean_fun(norm[i, norm_ref_samples])
+apply_mean_over_rows <- function(mat, mean_fun) {
+  unlist(lapply(seq(1, nrow(mat)), function(i) {
+    mean_fun(mat[i, ])
   }))
-  norm_ref_values
 }
 
-#' Helper function to get trimmed matrix
-#'
-#' @param raw raw count matrix
-#' @param norm_fact normalization factors
-#' @param a_trim_norm whether to use normalized values for trimming
-#' @param a_trim_value threshold for trimming
-#' @param a_trim_mean_fun mean function for trimming
-#' @param replace_zero_by value to replace zeros
-#' @return trimmed matrix
-get_trimmed_mat <- function(
-  raw, norm_fact, a_trim_norm, a_trim_value,
-  a_trim_mean_fun, replace_zero_by
+#' Helper function to get trimmed ids
+#' @param trim_ref reference expression vector
+#' @param trim_grp expression vector
+#' @param mean_fun mean function to compute average
+#' @param a_trim_value trim value
+#' @param m_trim_prop trim proportion top and bottom
+get_trimmed_ids <- function(
+  trim_ref, trim_grp, mean_fun, a_trim_value, m_trim_prop
 ) {
-
-  trimmed_mat <- raw * norm_fact
-
-  if (a_trim_norm) {
-    base_mat <- trimmed_mat
+  if (a_trim_value > 0) {
+    a_vector <- apply_mean_over_rows(
+      matrix(c(trim_ref, trim_grp), byrow = FALSE, ncol = 2), mean_fun
+    )
+    ids <- names(a_vector[a_vector > a_trim_value])
   } else {
-    base_mat <- raw
+    ids <- names(trim_ref)
   }
-  base_mat_mean <- unlist(lapply(seq(1, nrow(base_mat)), function(i) {
-    a_trim_mean_fun(base_mat[i, ])
-  }))
-  trimmed_mat[trimmed_mat == 0] <- replace_zero_by
-  trimmed_mat[base_mat_mean > a_trim_value, ]
+  if (m_trim_prop > 0) {
+    assert_that(m_trim_prop < 0.5)
+    ratios <- trim_grp[ids] / trim_ref[ids]
+    n_trim <- floor(length(ids) * m_trim_prop)
+    names(ratios)[order(ratios)][(n_trim + 1):(length(ratios) - n_trim)]
+  } else {
+    ids
+  }
 }
+
+#' Helper function to do inter normalization
+#' @param raw raw matrix
+#' @param norm_fact intra norm fact matrix
+#' @param ref_type reference type
+#' @param ref_samples reference samples
+#' @param design private$design
+#' @param norm_scale scale of normalization
+#' @param norm_by normalization by group or sample
+#' @param ref_mean mean function for reference
+#' @param norm_mean mean function for normalization
+#' @param tgt_mean mean function for target
+#' @param a_mean mean function for A
+#' @param a_trim_value trim value for A
+#' @param m_trim_prop trim proportion for M
+#' @return inter norm fact matrix
+compute_inter_norm <- function(
+  raw, norm_fact, ref_type, ref_samples, design, norm_scale, norm_by, ref_mean,
+  norm_mean, tgt_mean, a_mean, a_trim_value, m_trim_prop
+) {
+  ref_mean_fun <- set_mean_function(ref_mean)
+  norm_mean_fun <- set_mean_function(norm_mean)
+  tgt_mean_fun <- set_mean_function(tgt_mean)
+  a_mean_fun <- set_mean_function(a_mean)
+  assert_that(norm_scale %in% c("design", "batch", "group"))
+  assert_that(norm_by %in% c("sample", "group"))
+  batches <- design$list_batches
+  batch2ctrl <- design$find_control_group_per_batches()
+  mat <- norm_fact * raw
+  switch(
+    norm_scale,
+    design = {
+      ctrl_ids <- unique(unlist(purrr::map(
+        batches,
+        ~ design$extract_sample_names(.x, batch2ctrl[[.x]])
+      )))
+      ref_ids <- get_reference_ids(colnames(mat), ctrl_ids, ref_type,
+                                   ref_samples)
+      data_design <- unique(design$get_design()[c("batch", "group")])
+      grouped_samples <-  switch(
+        norm_by,
+        group = purrr::map2(
+          data_design$batch,
+          data_design$group,
+          ~ design$extract_sample_names(.x, .y)
+        ),
+        sample = as.list(colnames(mat))
+      )
+      main_calc_norm_fac(
+        mat, mat[, ref_ids, drop = FALSE], ref_mean_fun, norm_mean_fun,
+        tgt_mean_fun, a_mean_fun, a_trim_value, m_trim_prop, grouped_samples
+      )
+    },
+    batch = {
+      batch2groups <- design$list_groups_per_batches(include_ctrl = TRUE)
+      setNames(purrr::map(
+        batches,
+        function(batch) {
+          ctrl_grp <- batch2ctrl[[batch]]
+          ctrl_ids <- design$extract_sample_names(
+            in_batch = batch, in_group = ctrl_grp
+          )
+          tgt_ids <- design$extract_sample_names(
+            in_batch = batch
+          )
+          ref_ids <- get_reference_ids(tgt_ids, ctrl_ids, ref_type, ref_samples)
+          grouped_samples <- switch(
+            norm_by,
+            group = purrr::map(
+              batch2groups[[batch]],
+              ~ design$extract_sample_names(batch, .x)
+            ),
+            sample = as.list(tgt_ids)
+          )
+          main_calc_norm_fac(
+            mat[, tgt_ids, drop = FALSE], mat[, ref_ids, drop = FALSE],
+            ref_mean_fun, norm_mean_fun, tgt_mean_fun, a_mean_fun,
+            a_trim_value, m_trim_prop, grouped_samples
+          )
+        }
+      ), batches)
+    },
+    group =  {
+      batch2groups <- design$list_groups_per_batches(include_ctrl = TRUE)
+      setNames(purrr::map(
+        batches,
+        function(batch) {
+          ctrl_grp <- batch2ctrl[[batch]]
+          ctrl_ids <- design$extract_sample_names(
+            in_batch = batch, in_group = ctrl_grp
+          )
+          setNames(purrr::map(
+            batch2groups[[batch]],
+            function(group) {
+              grp_ids <- design$extract_sample_names(
+                in_batch = batch, in_group = group
+              )
+              tgt_ids <- unique(c(grp_ids, ctrl_ids))
+              ref_ids <- get_reference_ids(tgt_ids, ctrl_ids, ref_type,
+                                           ref_samples)
+              grouped_samples <- switch(
+                norm_by,
+                group = list(
+                  grp_ids, ctrl_ids
+                ),
+                sample = as.list(tgt_ids)
+              )
+              main_calc_norm_fac(
+                mat[, tgt_ids, drop = FALSE], mat[, ref_ids, drop = FALSE],
+                ref_mean_fun, norm_mean_fun, tgt_mean_fun, a_mean_fun,
+                a_trim_value, m_trim_prop, grouped_samples
+              )
+            }
+          ), batch2groups[[batch]])
+        }
+      ), batches)
+    }
+  )
+}
+
+
 
 #' Helper function for ExprData$compute_and_set_intra_norm_fact
 #'
@@ -159,68 +336,6 @@ compute_intra_norm_factor <- function(
   intra_norm_fact
 }
 
-#' Helper function to check args
-#' @param method see ExprData$compute_and_set_intra_norm_fact
-#' @param norm_scale see ExprData$compute_and_set_intra_norm_fact
-#' @param norm_by see ExprData$compute_and_set_intra_norm_fact
-#' @param norm_ref see ExprData$compute_and_set_intra_norm_fact
-#' @param norm_ref_mean see ExprData$compute_and_set_intra_norm_fact
-#' @param m_trim_prop see ExprData$compute_and_set_intra_norm_fact
-#' @param m_trim_mean see ExprData$compute_and_set_intra_norm_fact
-#' @param a_trim_mean see ExprData$compute_and_set_intra_norm_fact
-#' @param a_trim_norm see ExprData$compute_and_set_intra_norm_fact
-#' @param ncpus see ExprData$compute_and_set_intra_norm_fact
-#' @param a_trim_value see ExprData$compute_and_set_intra_norm_fact
-#' @param replace_zero_by see ExprData$compute_and_set_intra_norm_fact
-inter_norm_check <- function(
-  method, norm_scale, norm_by, norm_ref, norm_ref_mean, m_trim_prop,
-  m_trim_mean, a_trim_value, a_trim_norm, a_trim_mean, replace_zero_by, ncpus
-){
-
-  if (method == "tmm" && m_trim_mean == "median") {
-    logging::logwarning(paste(
-      "tmm method with median as mean function...",
-      "Is that not simply the median method ?"
-    ))
-  }
-
-  if (norm_scale == "group") {
-    if (norm_ref != "ctrl") {
-      logging::loginfo(
-        "For group-scale normalization, `norm_ref` is forced to 'ctrl'."
-      )
-      norm_ref <- "ctrl"
-    }
-  }
-
-  if (method == "tmm" && m_trim_prop == 0) {
-    logging::logerror("`m_trim_prop` cannot be 0 with `method` tmm")
-    stop()
-  }
-
-  if (m_trim_prop <= 0 || m_trim_prop >= 0.5) {
-    logging::logerror("`m_trim_prop must` be between 0 and 0.5 excluded")
-    stop()
-  }
-
-  if (norm_by == "group") {
-    logging::logerror("`norm_by` group is not yet implemented")
-    stop()
-  }
-
-  if (norm_ref == "ctrl" && norm_scale == "design") {
-    logging::logerror(
-      "`norm_ref` ctrl is not compatible with `norm_scale` design"
-    )
-    stop()
-  }
-
-  if (ncpus > parallelly::availableCores() - 1) {
-    logging::logwarn("The number of core asked was more than available")
-  }
-
-}
-
 #' Helper function for ExprData$compute_norm_fact
 #'
 #' @param selected_ids private$selected_ids (see ExprData)
@@ -280,8 +395,7 @@ compute_norm_fact_helper <- function(
   }
   if (!is.null(norm_fact_inter)) {
     if (intra_norm) {
-      norm_fact <- norm_fact %*% diag(norm_fact_inter[col_ids])
-      colnames(norm_fact) <- col_ids
+      norm_fact <- sweep(norm_fact, 2, norm_fact_inter[col_ids], FUN = "*")
     } else {
       norm_fact <- norm_fact_inter[col_ids]
     }
