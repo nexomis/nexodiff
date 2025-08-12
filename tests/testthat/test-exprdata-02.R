@@ -133,37 +133,37 @@ testthat::test_that("summary values are ok", {
 
   # Check tax_id values
   testthat::expect_equal(
-    summary_default$tax_id[1, "run1_A1"],
+    summary_default$tax_id[1, "A1"],
     700
   )
   testthat::expect_equal(
-    summary_default$tax_id[1, "run1_B1"],
+    summary_default$tax_id[1, "B1"],
     700
   )
   testthat::expect_equal(
-    summary_default$tax_id[2, "run1_A1"],
+    summary_default$tax_id[2, "A1"],
     1200
   )
   testthat::expect_equal(
-    summary_default$tax_id[2, "run1_B1"],
+    summary_default$tax_id[2, "B1"],
     1200
   )
 
   # Check type values
   testthat::expect_equal(
-    summary_default$type[1, "run1_A1"],
+    summary_default$type[1, "A1"],
     1250
   )
   testthat::expect_equal(
-    summary_default$type[1, "run1_B1"],
+    summary_default$type[1, "B1"],
     1250
   )
   testthat::expect_equal(
-    summary_default$type[2, "run1_A1"],
+    summary_default$type[2, "A1"],
     650
   )
   testthat::expect_equal(
-    summary_default$type[2, "run1_B1"],
+    summary_default$type[2, "B1"],
     650
   )
 

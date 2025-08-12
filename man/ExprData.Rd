@@ -2,8 +2,7 @@
 % Please edit documentation in R/class_ExprData.r
 \name{ExprData}
 \alias{ExprData}
-\title{Show raw count summary per tax_id, tax_name and rna type for
-selected expressed tags}
+\title{An R6 class representing an RNA-Seq expression dataset.}
 \description{
 This class represents a RNA sequencing dataset containing the
 following information:
@@ -25,21 +24,28 @@ Column names are the sample names, and row names are the expression tag
 names.
 }
 }
-\details{
-An R6 class representing an RNA-Seq expression dataset.
-}
 \examples{
 
 ## ------------------------------------------------
 ## Method `ExprData$show_etags_summary`
 ## ------------------------------------------------
 
-show_etags_summary("raw")
+show_etags_summary()
+show_etags_summary(intra_norm=TRUE)
+Plot results from show_etags_summary.
+
+## ------------------------------------------------
+## Method `ExprData$plot_etags_summary`
+## ------------------------------------------------
+
+show_etags_summary()
+show_etags_summary(intra_norm=TRUE)
 }
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-ExprData-show_etags_summary}{\code{ExprData$show_etags_summary()}}
+\item \href{#method-ExprData-plot_etags_summary}{\code{ExprData$plot_etags_summary()}}
 \item \href{#method-ExprData-filter_and_set_selected_ids}{\code{ExprData$filter_and_set_selected_ids()}}
 \item \href{#method-ExprData-compute_and_set_inter_norm_fact}{\code{ExprData$compute_and_set_inter_norm_fact()}}
 \item \href{#method-ExprData-compute_and_set_intra_norm_fact}{\code{ExprData$compute_and_set_intra_norm_fact()}}
@@ -53,12 +59,12 @@ show_etags_summary("raw")
 \item \href{#method-ExprData-get_inter_norm_fact_opts}{\code{ExprData$get_inter_norm_fact_opts()}}
 \item \href{#method-ExprData-compute_norm}{\code{ExprData$compute_norm()}}
 \item \href{#method-ExprData-is_with_fixed_length}{\code{ExprData$is_with_fixed_length()}}
+\item \href{#method-ExprData-get_intra_norm_fact}{\code{ExprData$get_intra_norm_fact()}}
+\item \href{#method-ExprData-get_inter_norm_fact}{\code{ExprData$get_inter_norm_fact()}}
 \item \href{#method-ExprData-get_main_etag}{\code{ExprData$get_main_etag()}}
 \item \href{#method-ExprData-is_at_gene_level}{\code{ExprData$is_at_gene_level()}}
 \item \href{#method-ExprData-get_design}{\code{ExprData$get_design()}}
 \item \href{#method-ExprData-get_annotation}{\code{ExprData$get_annotation()}}
-\item \href{#method-ExprData-sum_per_type_per_sample}{\code{ExprData$sum_per_type_per_sample()}}
-\item \href{#method-ExprData-plot_sum_per_type_per_sample}{\code{ExprData$plot_sum_per_type_per_sample()}}
 \item \href{#method-ExprData-plot_dist_per_sample}{\code{ExprData$plot_dist_per_sample()}}
 \item \href{#method-ExprData-extract_pairwise_data_with_design}{\code{ExprData$extract_pairwise_data_with_design()}}
 \item \href{#method-ExprData-clean_id_versions}{\code{ExprData$clean_id_versions()}}
@@ -72,35 +78,95 @@ show_etags_summary("raw")
 \if{html}{\out{<a id="method-ExprData-show_etags_summary"></a>}}
 \if{latex}{\out{\hypertarget{method-ExprData-show_etags_summary}{}}}
 \subsection{Method \code{show_etags_summary()}}{
-This function computes a raw count summary per tax_id, tax_name and rna
-type for selected expressed tags, and returns a list of count tables per
-feature.
+This function computes a summary per tax_id, tax_name and rna type for
+selected expressed tags, and returns a list of tables per feature.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ExprData$show_etags_summary(type = "etags", in_batch = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{ExprData$show_etags_summary(
+  in_batch = NULL,
+  tr_fn = NULL,
+  sum_fn = sum,
+  intra_norm = FALSE,
+  inter_norm = FALSE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{type}}{A string specifying the type of summary to compute. Possible
-values are:
-\itemize{
-\item "etags" for the number of expression tags
-\item "raw" for the sum of raw reads counts per samples
-\item "norm" for the sum of normalized reads counts per samples.
-}}
-
 \item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to
 include.}
+
+\item{\code{tr_fn}}{A function to transform the expression values before
+summarizing. Default is identity function (no transformation).}
+
+\item{\code{sum_fn}}{A function to aggregate the transformed values. Default
+is "sum", but can be "sum_fn = function(x) sum(as.integer(x > 0))"
+to count non zero genes for example.}
+
+\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
+normalization. Only used when type="norm".}
+
+\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
+normalization. Only used when type="norm".}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A list of count tables per feature
+A list of tables per feature
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{show_etags_summary("raw")
+\preformatted{show_etags_summary()
+show_etags_summary(intra_norm=TRUE)
+Plot results from show_etags_summary.
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ExprData-plot_etags_summary"></a>}}
+\if{latex}{\out{\hypertarget{method-ExprData-plot_etags_summary}{}}}
+\subsection{Method \code{plot_etags_summary()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ExprData$plot_etags_summary(
+  in_batch = NULL,
+  tr_fn = NULL,
+  sum_fn = sum,
+  intra_norm = FALSE,
+  inter_norm = FALSE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to
+include.}
+
+\item{\code{tr_fn}}{A function to transform the expression values before
+summarizing. Default is identity function (no transformation).}
+
+\item{\code{sum_fn}}{A function to aggregate the transformed values. Default
+is "sum", but can be "sum_fn = function(x) sum(as.integer(x > 0))"
+to count non zero genes for example.}
+
+\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
+normalization. Only used when type="norm".}
+
+\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
+normalization. Only used when type="norm".}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list of tables per feature
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{show_etags_summary()
+show_etags_summary(intra_norm=TRUE)
 }
 \if{html}{\out{</div>}}
 
@@ -141,6 +207,7 @@ e.g c("mRNA", "transcript")}
 designated with \code{filtered_var} is in \code{values}
 \item "excl" to keep only an expression tag if its value for the variable
 designated with \code{filtered_var} is not in \code{values}.
+Compute and set inter normalization factors
 }}
 }
 \if{html}{\out{</div>}}
@@ -150,93 +217,139 @@ designated with \code{filtered_var} is not in \code{values}.
 \if{html}{\out{<a id="method-ExprData-compute_and_set_inter_norm_fact"></a>}}
 \if{latex}{\out{\hypertarget{method-ExprData-compute_and_set_inter_norm_fact}{}}}
 \subsection{Method \code{compute_and_set_inter_norm_fact()}}{
-Compute and set inter normalization factors with extensible
-parametrization. Please be aware that this function is designed to handle
-various normalization methods, including median and TMM. However, at the
-time of implementation, only the median method has been thoroughly
-tested. Other methods such as TMM might not produce accurate results and
-should be used with caution.
+Compute and set inter normalization factors
+
+
+This function computes scaling factors using a ratio-based
+method to correct for systematic technical biases between samples, such
+as differences in sequencing depth or library composition. By default, it
+performs Median Ratio Normalization (MRN), as \code{norm_mean} is \code{"median"}
+and M-value trimming is disabled (\code{m_trim_prop = 0}). It can be
+configured to perform TMM-style normalization by setting \code{m_trim_prop}
+and norm_mean="geometric"\code{or}norm_mean="mod.geometric"`. Note that the
+weigthed mean for TMM is not available yet.
+
+The normalization process is as follows:
+\enumerate{
+\item \strong{Reference Selection}: A reference expression profile is created
+from samples chosen via \code{ref_type} and \code{ref_samples}. Gene expression
+values are averaged using the \code{ref_mean} method.
+\item \strong{Target Processing}: For each target sample or group (\code{norm_by}), a
+target expression profile is created using \code{tgt_mean}.
+\item \strong{M and A Vector Calculation}:
+\itemize{
+\item The \strong{A-vector} (average expression) is used to filter out
+low-expression genes, which can be noisy.
+\item The \strong{M-vector} (expression ratio: target/reference) is used to
+derive the normalization factor from its central tendency.
+}
+\item \strong{Trimming Process}: A sequential trimming process refines the set
+of genes used for normalization:
+\itemize{
+\item \strong{A-vector trimming}: Genes with average expression below
+\code{a_trim_value} are removed.
+\item \strong{M-vector trimming}: A proportion (\code{m_trim_prop}) of genes with
+the most extreme expression ratios are removed. This is disabled by
+default (\code{m_trim_prop = 0}).
+\item \strong{Extreme ratio trimming}: If \code{trim_extreme} is \code{TRUE}, genes with
+infinite or zero ratios are removed. This is advised when \code{norm_mean}
+is not \code{"median"} or when \code{m_trim_prop} is too small to remove these
+values.
+}
+\item \strong{Factor Calculation}: The final normalization factor is computed by
+applying \code{norm_mean} to the ratio (M-vector) of the remaining genes.
+\item \strong{Normalization Scope (\code{norm_scale})}: This parameter determines the
+scope and reference for normalization.
+\itemize{
+\item \strong{\code{design}}: Normalization is performed across all samples at once
+This is the generally recommended approach as it makes all samples
+comparable across the entire experiment.
+\item \strong{\code{batch}} or \strong{\code{group}}: Normalization is performed
+independently within each context. This can mitigate biases if a
+particular batch or group is compositionally very different. However,
+it renders data comparable only \emph{within} that same context
+(e.g., within a batch), not across the entire design.
+}
+}
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ExprData$compute_and_set_inter_norm_fact(
-  method = "median",
-  norm_scale = "group",
+  norm_scale = "design",
   norm_by = "sample",
-  norm_ref = "all",
-  norm_ref_mean = "mod.geometric",
-  m_trim_prop = 0.3,
-  m_trim_mean = "mod.geometric",
-  a_trim_value = 0.5,
-  a_trim_norm = FALSE,
-  a_trim_mean = "mod.geometric",
-  replace_zero_by = 0,
-  ncpus = 1
+  ref_type = "all",
+  ref_samples = NULL,
+  ref_mean = "arithmetic",
+  norm_mean = "median",
+  tgt_mean = "arithmetic",
+  a_mean = "arithmetic",
+  a_trim_value = 1,
+  m_trim_prop = 0,
+  trim_extreme = FALSE
 )}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{method}}{Normalization method to use:
-\itemize{
-\item "none" apply no normalization
-\item "median" apply median ratio normalization
-\item "tmm" apply trimmed mean of median normalization
-TODO: add litterature reference for each
-}}
-
 \item{\code{norm_scale}}{Scale to apply the normalization:
 \itemize{
 \item "design" for all samples in one go
 \item "batch" for applying norm_factors per batch
 \item "group" for applying norm factors per batch per group.
+The scale will have an impact on the reference selection if ref type is
+"ctrl" or "all". In consequences the same sample can be associated with
+different scaling factor if it appears in different batch/group.
+Therefore data normalized at the "batch" or "group" level can not be
+analyzed at the design level. (and group scale not at the batch level
+either). Indeed at group/batch levels the inter_norm can only be applied
+at group/batch level.
 }}
 
-\item{\code{norm_by}}{Where to apply the normalization factor:
+\item{\code{norm_by}}{level by which M and A vector are computed followed by.
+the scaling factor for normalization.}
+
+\item{\code{ref_type}}{Type of reference samples to use for normalization.
 \itemize{
-\item "samples" for the sample level
-\item "group" for the group level (not implemented).
-The normalized can be computed for each sample or can be computed based
-on the mean expression within a group.
+\item "all" for using all samples as reference
+\item "ctrl" for using only control samples as reference
+\item "specified" for using specific samples \code{ref_samples} as reference
 }}
 
-\item{\code{norm_ref}}{Sample(s) to use as reference for normalization:
+\item{\code{ref_samples}}{Samples to use as reference for normalization.}
+
+\item{\code{ref_mean}}{Method for averaging gene expression across reference
+samples. It is recommended to use the same method for \code{ref_mean},
+\code{tgt_mean}, and \code{a_mean}.
 \itemize{
-\item "all" for all samples
-\item "ctrl" for control samples (not tested and not compatible with scale
-design)
-\item character vector with sample names (not tested)
-\item integer vector with sample rank in expression matrix (not tested).
+\item \strong{\code{"arithmetic"}}: Recommended when using library size-scaled
+intra-normalization (e.g., "tpm", "fpkm", "fpm"). This preserves the
+sum of proportions.
+\item \strong{\code{"geometric"}}: Recommended when intra-normalization does not
+account for library size (e.g., "none", "fpk"). The library size effect
+is then absorbed into the inter-sample normalization factor. This
+approach, with "none" intra-normalization, mirrors the default
+behavior in DESeq2. Note that this can be problematic if normalization
+is performed per group (\code{norm_by = "group"}).
+\item Other options: \code{"median"}, \code{"nz.geometric"}, \code{"mod.geometric"}.
 }}
 
-\item{\code{norm_ref_mean}}{Method for the mean of gene expression between
-samples of the reference. Possible options are given for \code{m_trim_mean}.}
+\item{\code{norm_mean}}{Method for the mean of ratios between the target and the
+reference. See \code{ref_mean} for possible values.}
 
-\item{\code{m_trim_prop}}{Proportion of expression ratio (M-value) to trim at
-both tails (only for TMM).}
+\item{\code{tgt_mean}}{Method for averaging gene expression across target
+samples. See \code{ref_mean} for recommended usage and available options.}
 
-\item{\code{m_trim_mean}}{Method for the mean of gene expression ratios in the
-TMM method to compute the normalization factor. Possible options are:
-\itemize{
-\item "median"
-\item "geometric"
-\item "nz.geometric" geometric without zero
-\item "mod.geometric" modified geometric with epsilon = 1e-05
-(see https://arxiv.org/abs/1806.06403)
-\item "arithmetic"
-}}
+\item{\code{a_mean}}{Method for averaging gene expression between target and
+reference samples to calculate the A-vector. See \code{ref_mean} for
+recommended usage and available options.}
 
-\item{\code{a_trim_value}}{Threshold value to trim genes from the calculation of
-the normalization factors based on mean gene expression (A-value).}
+\item{\code{a_trim_value}}{Value for trimming the A vector.}
 
-\item{\code{a_trim_norm}}{Whether to use (intra) normalized value to trim based
-on mean gene expression (only FALSE tested).}
+\item{\code{m_trim_prop}}{Proportion of values to trim from the M vector.}
 
-\item{\code{a_trim_mean}}{Method for the mean of gene expression between all
-samples. Possible options are given for \code{m_trim_mean}.}
-
-\item{\code{replace_zero_by}}{Replace all zero raw count by the given value.}
-
-\item{\code{ncpus}}{Number of cpus to use for computation (default = 1)}
+\item{\code{trim_extreme}}{Whether to trim extreme values from the M vector,
+before calculating the mean. If the mean function \code{norm_mean} is not
+"median", extreme values will causes issues with the calculation of the
+mean.}
 }
 \if{html}{\out{</div>}}
 }
@@ -307,7 +420,11 @@ interger matrix with raw counts for expressed tags
 \subsection{Method \code{filter_and_get_raw()}}{
 Filter and get raw count matrix
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ExprData$filter_and_get_raw(in_batch = NULL, in_group = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{ExprData$filter_and_get_raw(
+  in_batch = NULL,
+  in_group = NULL,
+  include_ctrl = FALSE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -318,6 +435,8 @@ include.}
 
 \item{\code{in_group}}{(optional) A character vector specifying the group(s) to
 include.}
+
+\item{\code{include_ctrl}}{when in_group is specified, will include batch ctrl}
 }
 \if{html}{\out{</div>}}
 }
@@ -372,7 +491,9 @@ Get normalization factors matrix
   in_batch = NULL,
   in_group = NULL,
   inter_norm = FALSE,
-  intra_norm = TRUE
+  intra_norm = TRUE,
+  include_ctrl = FALSE,
+  rescale_inter_norm = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -390,6 +511,12 @@ normalization.}
 
 \item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
 normalization.}
+
+\item{\code{include_ctrl}}{if TRUE and if \code{in_batch} and \code{in_group} are
+specified, control samples from the specified batch will be included.}
+
+\item{\code{rescale_inter_norm}}{Rescale inter-sample normalization factors so
+that their geometric mean is 1. Default is TRUE.}
 }
 \if{html}{\out{</div>}}
 }
@@ -443,7 +570,9 @@ the \code{in_batch} argument might be mandatory.
   in_batch = NULL,
   in_group = NULL,
   intra_norm = TRUE,
-  inter_norm = FALSE
+  inter_norm = FALSE,
+  include_ctrl = FALSE,
+  rescale_inter_norm = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -461,6 +590,11 @@ normalization.}
 
 \item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
 normalization.}
+
+\item{\code{include_ctrl}}{include control samples in the normalization}
+
+\item{\code{rescale_inter_norm}}{Rescale inter-sample normalization factors so
+that their geometric mean is 1. Default is TRUE.}
 }
 \if{html}{\out{</div>}}
 }
@@ -479,6 +613,53 @@ Are the expression tags lengths fixed ?
 
 \subsection{Returns}{
 numeric matrix with raw counts for expressed tags
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ExprData-get_intra_norm_fact"></a>}}
+\if{latex}{\out{\hypertarget{method-ExprData-get_intra_norm_fact}{}}}
+\subsection{Method \code{get_intra_norm_fact()}}{
+Get the intra normalization factor
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ExprData$get_intra_norm_fact(in_batch = NULL, in_group = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to
+include.}
+
+\item{\code{in_group}}{(optional) A character vector specifying the group(s) to
+include.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+numeric matrix with intra normalization factor
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ExprData-get_inter_norm_fact"></a>}}
+\if{latex}{\out{\hypertarget{method-ExprData-get_inter_norm_fact}{}}}
+\subsection{Method \code{get_inter_norm_fact()}}{
+Get the inter normalization factor
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ExprData$get_inter_norm_fact(in_batch = NULL, in_group = NULL, rescale = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to
+include.}
+
+\item{\code{in_group}}{(optional) A character vector specifying the group(s) to
+include.}
+
+\item{\code{rescale}}{Rescale the factors so that their geometric mean is 1.}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}
@@ -541,74 +722,6 @@ build the expression data object.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-ExprData-sum_per_type_per_sample"></a>}}
-\if{latex}{\out{\hypertarget{method-ExprData-sum_per_type_per_sample}{}}}
-\subsection{Method \code{sum_per_type_per_sample()}}{
-Get sum of count or normalized value per rna type
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ExprData$sum_per_type_per_sample(intra_norm = FALSE, log2_expr = FALSE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
-normalization.}
-
-\item{\code{log2_expr}}{A boolean indicating whether to use the log2(x+2)
-transformation for expression data.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-data frame with counts with colums
-\itemize{
-\item type: RNA type
-\item sample: sample name
-\item total: Sum of count or normalized value
-}
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-ExprData-plot_sum_per_type_per_sample"></a>}}
-\if{latex}{\out{\hypertarget{method-ExprData-plot_sum_per_type_per_sample}{}}}
-\subsection{Method \code{plot_sum_per_type_per_sample()}}{
-plot sum of count or intra-normalized values per rna type (Inter norm is
-not available for this)
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ExprData$plot_sum_per_type_per_sample(
-  intra_norm = FALSE,
-  exclude_type = c(),
-  same_scale = TRUE,
-  horizonal_bar = TRUE,
-  log2_expr = FALSE
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
-normalization.}
-
-\item{\code{exclude_type}}{character vector with the rne type to exclude from
-the graph}
-
-\item{\code{same_scale}}{whether to represent the scale with the same}
-
-\item{\code{horizonal_bar}}{whether the bar in the plot are horizontal rather
-than vertical}
-
-\item{\code{log2_expr}}{A boolean indicating whether to use the log2(x+2)
-transformation for expression data.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-ggplot2 graph
-}
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ExprData-plot_dist_per_sample"></a>}}
 \if{latex}{\out{\hypertarget{method-ExprData-plot_dist_per_sample}{}}}
 \subsection{Method \code{plot_dist_per_sample()}}{
@@ -666,7 +779,11 @@ ggplot2 graph
 \subsection{Method \code{extract_pairwise_data_with_design()}}{
 Get formatted data for a group with its matching control within a batch
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ExprData$extract_pairwise_data_with_design(in_batch, in_group)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{ExprData$extract_pairwise_data_with_design(
+  in_batch,
+  in_group,
+  rescale_inter_norm
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -677,6 +794,9 @@ include.}
 
 \item{\code{in_group}}{(optional) A character vector specifying the group(s) to
 include.}
+
+\item{\code{rescale_inter_norm}}{Rescale inter-sample normalization factors so
+that their geometric mean is 1. Default is TRUE.}
 }
 \if{html}{\out{</div>}}
 }
@@ -747,13 +867,17 @@ Function to draw PCA plots
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to include.}
+\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to
+include.}
 
-\item{\code{in_group}}{(optional) A character vector specifying the group(s) to include.}
+\item{\code{in_group}}{(optional) A character vector specifying the group(s) to
+include.}
 
-\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample normalization.}
+\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
+normalization.}
 
-\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample normalization.}
+\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
+normalization.}
 
 \item{\code{tr_fn}}{data transformation function}
 
@@ -767,7 +891,8 @@ Function to draw PCA plots
 
 \item{\code{prcomp_autoplot_args}}{list of argument that are used with autoplot.}
 
-\item{\code{include_ctrl_at_group_scale}}{whether to include the controls at group scale}
+\item{\code{include_ctrl_at_group_scale}}{whether to include the controls at
+group scale}
 
 \item{\code{tags}}{vector of tag ids to use for the plot}
 
@@ -805,13 +930,17 @@ Function to draw correlation plots
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to include.}
+\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to
+include.}
 
-\item{\code{in_group}}{(optional) A character vector specifying the group(s) to include.}
+\item{\code{in_group}}{(optional) A character vector specifying the group(s) to
+include.}
 
-\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample normalization.}
+\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
+normalization.}
 
-\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample normalization.}
+\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
+normalization.}
 
 \item{\code{tr_fn}}{data transformation function}
 
@@ -819,7 +948,8 @@ Function to draw correlation plots
 
 \item{\code{ggplot_mod}}{ggplot modifier that will be added to the graph.}
 
-\item{\code{include_ctrl_at_group_scale}}{whether to include the controls at group scale}
+\item{\code{include_ctrl_at_group_scale}}{whether to include the controls at
+group scale}
 
 \item{\code{tags}}{vector of tag ids to use for the plot}
 
@@ -865,13 +995,17 @@ Function to draw hierarchical clustering plots
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to include.}
+\item{\code{in_batch}}{(optional) A character vector specifying the batch(es) to
+include.}
 
-\item{\code{in_group}}{(optional) A character vector specifying the group(s) to include.}
+\item{\code{in_group}}{(optional) A character vector specifying the group(s) to
+include.}
 
-\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample normalization.}
+\item{\code{intra_norm}}{A boolean indicating whether to apply intra-sample
+normalization.}
 
-\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample normalization.}
+\item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
+normalization.}
 
 \item{\code{tr_fn}}{data transformation function}
 
@@ -895,7 +1029,8 @@ Function to draw hierarchical clustering plots
 
 \item{\code{prcomp_args}}{args to be used with prcomp.}
 
-\item{\code{include_ctrl_at_group_scale}}{whether to include the controls at group scale}
+\item{\code{include_ctrl_at_group_scale}}{whether to include the controls at
+group scale}
 
 \item{\code{tags}}{vector of tag ids to use for the plot}
 

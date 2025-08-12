@@ -356,13 +356,13 @@ ExprData <- R6::R6Class("ExprData", # nolint
       if (include_ctrl) {
         assert_that(! is.null(in_group))
         ctrl_group <- private$design$find_control_group_per_batches()[in_batch]
-        ids <- unique(
-          ids, private$design$extract_sample_names(in_batch, ctrl_group)
-        )
+        ids <- unique(c(
+          private$design$extract_sample_names(in_batch, ctrl_group), ids
+        ))
       }
       private$raw[
         private$selected_ids,
-        private$design$extract_sample_names(in_batch, in_group)
+        ids
       ]
     },
 
@@ -435,15 +435,20 @@ ExprData <- R6::R6Class("ExprData", # nolint
       rescale_inter_norm = TRUE
     ) {
       if (intra_norm) {
-        self$filter_and_get_raw(in_batch, in_group, include_ctrl) *
+        intra <- self$filter_and_get_raw(in_batch, in_group, include_ctrl)
+        inter <-
           self$compute_norm_fact(
             in_batch, in_group,
             inter_norm = inter_norm, intra_norm = intra_norm,
             include_ctrl = include_ctrl,
             rescale_inter_norm = rescale_inter_norm
           )
+        assert_that(all(colnames(inter) %in% colnames(intra)))
+        intra * inter[, colnames(intra)]
       } else {
-        assert_that(! inter_norm)
+        assert_that(! inter_norm,
+          msg = "`intra_norm` cannot be FALSE if `inter_norm` is TRUE"
+        )
         self$filter_and_get_raw(in_batch, in_group, include_ctrl)
       }
     },
@@ -485,15 +490,14 @@ ExprData <- R6::R6Class("ExprData", # nolint
       )
       sample_names <- private$design$extract_sample_names(in_batch, in_group)
       inter_norm_factors <- inter_norm_factors[sample_names]
-
-      if (rescale && !is.null(inter_norm_factors) &&
-          length(inter_norm_factors) > 0) {
+      if (rescale && ! is.null(inter_norm_factors)) {
         inter_norm_factors <- inter_norm_factors /
           exp(mean(log(inter_norm_factors)))
       }
       inter_norm_factors
     },
-#' @description
+
+    #' @description
     #' Get the main expression tag id. The tag id corresponds to the unique id
     #' linked with a expression point. It can be tx_id (for transcript id) or
     #' "tgid" for "typed gene id". Why typed gene ID ? because some genes have
@@ -630,9 +634,14 @@ ExprData <- R6::R6Class("ExprData", # nolint
         in_batch, all_groups, inter_norm = FALSE, intra_norm = TRUE
       )[, results$all_samples]
 
-      results$inter_norm_fact <- self$get_inter_norm_fact(
+      sf <- self$get_inter_norm_fact(
         in_batch, all_groups, rescale_inter_norm
-      )[results$all_samples]
+      )
+
+      # mandatory for rescaling to be OK
+      assert(all(names(sf) %in% results$all_samples))
+
+      results$inter_norm_fact <- sf[results$all_samples]
 
       results$design_table <-
         private$design$get_pairwise_design(in_batch, all_groups)
@@ -794,7 +803,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
     selected_samples = NULL,
     # whether the expression tag lengths are fixed or not
     with_fixed_length = NULL,
-    # main expression tag which is the row-nams of data frame raw, len and
+    # main expression tag which is the row-nams-of data frame raw, len and
     # norm_fact
     main_etag = NULL,
     plot_complex = function(
@@ -1187,4 +1196,5 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
     }
   )
 )
+
 

@@ -21,3 +21,4 @@ intra normalization factor matrix
 \description{
 Helper function for ExprData$compute_and_set_intra_norm_fact
 }
+\keyword{internal}

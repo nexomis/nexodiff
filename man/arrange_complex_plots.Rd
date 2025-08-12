@@ -15,3 +15,4 @@ Arranged plot grid
 \description{
 Helper function to arrange complex plots
 }
+\keyword{internal}

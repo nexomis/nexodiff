@@ -13,7 +13,9 @@ compute_norm_fact_helper(
   in_batch = NULL,
   in_group = NULL,
   inter_norm = FALSE,
-  intra_norm = TRUE
+  intra_norm = TRUE,
+  include_ctrl = FALSE,
+  rescale_inter_norm = TRUE
 )
 }
 \arguments{
@@ -34,6 +36,12 @@ compute_norm_fact_helper(
 \item{inter_norm}{see ExprData$compute_norm_fact}
 
 \item{intra_norm}{see ExprData$compute_norm_fact}
+
+\item{include_ctrl}{if TRUE and if \code{in_batch} and \code{in_group} are
+specified, control samples from the specified batch will be included.}
+
+\item{rescale_inter_norm}{Rescale inter-sample normalization factors so
+that their geometric mean is 1. Default is TRUE.}
 }
 \value{
 normalization factor matrix
@@ -41,3 +49,4 @@ normalization factor matrix
 \description{
 Helper function for ExprData$compute_norm_fact
 }
+\keyword{internal}

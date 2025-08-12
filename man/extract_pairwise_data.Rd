@@ -33,8 +33,10 @@ extract_pairwise_data(
 \item{include_ctrl}{see ExprData$extract_pairwise_data_with_design}
 }
 \value{
-list with selected attributes (see ExprData$extract_pairwise_data_with_design)
+list with selected attributes (see ExprData$extract_pairwise
 }
 \description{
 Helper function for ExprData$extract_pairwise_data_with_design
 }
+\keyword{data_with_design)}
+\keyword{internal}

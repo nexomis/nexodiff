@@ -41,3 +41,4 @@ List with prepared data and metadata
 \description{
 Helper function to prepare data for complex plots
 }
+\keyword{internal}

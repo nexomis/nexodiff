@@ -21,3 +21,4 @@ NULL (stops execution if checks fail)
 \description{
 Helper function to check plot complex arguments
 }
+\keyword{internal}

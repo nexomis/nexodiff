@@ -383,41 +383,37 @@ compute_norm_fact_helper <- function(
   norm_fact_inter <- NULL
 
   if (inter_norm) {
-    if (is.null(inter_norm_fact)) {
-      norm_fact_inter <- rep(1, length(col_ids))
-      names(norm_fact_inter) <- col_ids
-    } else {
-      norm_scale <- inter_norm_fact_opts$norm_scale
-      norm_fact_inter <- switch(
-        norm_scale,
-        design = {
-          inter_norm_fact[col_ids]
-        },
-        batch = {
-          assert_that(!is.null(in_batch),
-            msg = "`in_batch` cannot be null when norm scale is 'batch'"
-          )
-          inter_norm_fact[[in_batch]][col_ids]
-        },
-        group = {
-          assert_that(!is.null(in_batch),
-            msg = "`in_batch` cannot be null when norm scale is 'group'"
-          )
-          assert_that(!is.null(in_group),
-            msg = "`in_group` cannot be null when norm scale is 'group'"
-          )
-          inter_norm_fact[[in_batch]][[in_group]][col_ids]
-        },
-        {
-          logging::logerror("Invalid `norm_scale`: %s",
-            inter_norm_fact_opts$norm_scale)
-          stop(1)
-        }
-      )
-      if (rescale_inter_norm && !is.null(norm_fact_inter)) {
-        norm_fact_inter <- norm_fact_inter /
-          exp(mean(log(norm_fact_inter)))
+    assert_that(! is.null(inter_norm_fact))
+    norm_scale <- inter_norm_fact_opts$norm_scale
+    norm_fact_inter <- switch(
+      norm_scale,
+      design = {
+        inter_norm_fact[col_ids]
+      },
+      batch = {
+        assert_that(!is.null(in_batch),
+          msg = "`in_batch` cannot be null when norm scale is 'batch'"
+        )
+        inter_norm_fact[[in_batch]][col_ids]
+      },
+      group = {
+        assert_that(!is.null(in_batch),
+          msg = "`in_batch` cannot be null when norm scale is 'group'"
+        )
+        assert_that(!is.null(in_group),
+          msg = "`in_group` cannot be null when norm scale is 'group'"
+        )
+        inter_norm_fact[[in_batch]][[in_group]][col_ids]
+      },
+      {
+        logging::logerror("Invalid `norm_scale`: %s",
+                          inter_norm_fact_opts$norm_scale)
+        stop(1)
       }
+    )
+    if (rescale_inter_norm && !is.null(norm_fact_inter)) {
+      norm_fact_inter <- norm_fact_inter /
+        exp(mean(log(norm_fact_inter)))
     }
   }
 
@@ -427,4 +423,3 @@ compute_norm_fact_helper <- function(
   }
   norm_fact
 }
-

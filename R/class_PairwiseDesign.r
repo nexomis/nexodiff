@@ -383,10 +383,15 @@ PairwiseDesign <- R6::R6Class( # nolint
       sample_details$sample <- as.character(sample_details$sample)
       sample_details$replicate <- as.character(sample_details$replicate)
       sample_details$sample_base <- sample_details$sample
-      rununique <- unique(sample_details[, c("sample", "run_id")])
-      if (length(rununique$sample) > length(unique(rununique$sample))) {
-        sample_details$sample <-
-          paste(sample_details$run_id, sample_details$sample, sep = "_")
+      
+      # Only add run prefix when there are multiple runs
+      unique_runs <- unique(sample_details$run_id)
+      if (length(unique_runs) > 1) {
+        rununique <- unique(sample_details[, c("sample", "run_id")])
+        if (length(rununique$sample) > length(unique(rununique$sample))) {
+          sample_details$sample <-
+            paste(sample_details$run_id, sample_details$sample, sep = "_")
+        }
       }
       logging::logdebug("Ending yaml parsing")
       logging::logdebug(str(sample_details))
@@ -457,8 +462,13 @@ PairwiseDesign <- R6::R6Class( # nolint
       if (! "run_id" %in% names(pairwise_design)) {
         pairwise_design$run_id <- "run1"
       }
-      pairwise_design$sample <-
-        paste(pairwise_design$run_id, pairwise_design$sample_base, sep = "_")
+      
+      # Only add run prefix when there are multiple runs
+      unique_runs <- unique(pairwise_design$run_id)
+      if (length(unique_runs) > 1) {
+        pairwise_design$sample <-
+          paste(pairwise_design$run_id, pairwise_design$sample_base, sep = "_")
+      }
 
       # Check that all batches have one and only one control group
       for (i_batch in unique(pairwise_design$batch)) {

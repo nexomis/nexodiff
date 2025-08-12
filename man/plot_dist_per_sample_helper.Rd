@@ -29,3 +29,4 @@ ggplot2 graph
 \description{
 Helper function for ExprData$plot_dist_per_sample
 }
+\keyword{internal}

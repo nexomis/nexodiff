@@ -4,18 +4,18 @@
 \alias{summarize_etags}
 \title{Helper function for ExprData$show_etags_summary}
 \usage{
-summarize_etags(selected_ids, annotation, at_gene_level, type = "etags", data)
+summarize_etags(annotation, at_gene_level, data, tr_fn, sum_fn)
 }
 \arguments{
-\item{selected_ids}{private$selected_ids (see ExprData)}
-
 \item{annotation}{private$annotation (see ExprData)}
 
 \item{at_gene_level}{private$at_gene_level (see ExprData)}
 
-\item{type}{see ExprData$show_etags_summary}
-
 \item{data}{input data}
+
+\item{tr_fn}{transformation function to apply to data}
+
+\item{sum_fn}{aggregation function to apply after transformation}
 }
 \value{
 A list of count tables per feature
@@ -23,3 +23,4 @@ A list of count tables per feature
 \description{
 Helper function for ExprData$show_etags_summary
 }
+\keyword{internal}

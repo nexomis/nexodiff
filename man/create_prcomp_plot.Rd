@@ -35,3 +35,4 @@ ggplot object
 \description{
 Helper function to create PCA plots
 }
+\keyword{internal}

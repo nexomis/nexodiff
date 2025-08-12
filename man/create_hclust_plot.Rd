@@ -50,3 +50,4 @@ ggplot object or arranged plots
 \description{
 Helper function to create hierarchical clustering plots
 }
+\keyword{internal}

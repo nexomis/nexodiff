@@ -19,3 +19,4 @@ ggplot object (ggmatrix)
 \description{
 Helper function to create correlation plots
 }
+\keyword{internal}

@@ -30,7 +30,9 @@ Extension of expression dataset at transcript-level
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="filter_and_set_selected_ids"><a href='../../nexodiff/html/ExprData.html#method-ExprData-filter_and_set_selected_ids'><code>nexodiff::ExprData$filter_and_set_selected_ids()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="get_annotation"><a href='../../nexodiff/html/ExprData.html#method-ExprData-get_annotation'><code>nexodiff::ExprData$get_annotation()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="get_design"><a href='../../nexodiff/html/ExprData.html#method-ExprData-get_design'><code>nexodiff::ExprData$get_design()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="get_inter_norm_fact"><a href='../../nexodiff/html/ExprData.html#method-ExprData-get_inter_norm_fact'><code>nexodiff::ExprData$get_inter_norm_fact()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="get_inter_norm_fact_opts"><a href='../../nexodiff/html/ExprData.html#method-ExprData-get_inter_norm_fact_opts'><code>nexodiff::ExprData$get_inter_norm_fact_opts()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="get_intra_norm_fact"><a href='../../nexodiff/html/ExprData.html#method-ExprData-get_intra_norm_fact'><code>nexodiff::ExprData$get_intra_norm_fact()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="get_intra_norm_fact_method"><a href='../../nexodiff/html/ExprData.html#method-ExprData-get_intra_norm_fact_method'><code>nexodiff::ExprData$get_intra_norm_fact_method()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="get_len"><a href='../../nexodiff/html/ExprData.html#method-ExprData-get_len'><code>nexodiff::ExprData$get_len()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="get_main_etag"><a href='../../nexodiff/html/ExprData.html#method-ExprData-get_main_etag'><code>nexodiff::ExprData$get_main_etag()</code></a></span></li>
@@ -39,12 +41,11 @@ Extension of expression dataset at transcript-level
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="is_with_fixed_length"><a href='../../nexodiff/html/ExprData.html#method-ExprData-is_with_fixed_length'><code>nexodiff::ExprData$is_with_fixed_length()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="plot_corr"><a href='../../nexodiff/html/ExprData.html#method-ExprData-plot_corr'><code>nexodiff::ExprData$plot_corr()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="plot_dist_per_sample"><a href='../../nexodiff/html/ExprData.html#method-ExprData-plot_dist_per_sample'><code>nexodiff::ExprData$plot_dist_per_sample()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="plot_etags_summary"><a href='../../nexodiff/html/ExprData.html#method-ExprData-plot_etags_summary'><code>nexodiff::ExprData$plot_etags_summary()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="plot_hclust"><a href='../../nexodiff/html/ExprData.html#method-ExprData-plot_hclust'><code>nexodiff::ExprData$plot_hclust()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="plot_prcomp"><a href='../../nexodiff/html/ExprData.html#method-ExprData-plot_prcomp'><code>nexodiff::ExprData$plot_prcomp()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="plot_sum_per_type_per_sample"><a href='../../nexodiff/html/ExprData.html#method-ExprData-plot_sum_per_type_per_sample'><code>nexodiff::ExprData$plot_sum_per_type_per_sample()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="reset"><a href='../../nexodiff/html/ExprData.html#method-ExprData-reset'><code>nexodiff::ExprData$reset()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="show_etags_summary"><a href='../../nexodiff/html/ExprData.html#method-ExprData-show_etags_summary'><code>nexodiff::ExprData$show_etags_summary()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="nexodiff" data-topic="ExprData" data-id="sum_per_type_per_sample"><a href='../../nexodiff/html/ExprData.html#method-ExprData-sum_per_type_per_sample'><code>nexodiff::ExprData$sum_per_type_per_sample()</code></a></span></li>
 </ul>
 </details>
 }}
