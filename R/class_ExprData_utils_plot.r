@@ -10,6 +10,7 @@ NULL
 #' @param mean_fun see ExprData$plot_dist_per_sample
 #' @param log2_expr see ExprData$plot_dist_per_sample
 #' @return ggplot2 graph
+#' @keywords internal
 plot_dist_per_sample_helper <- function(
   data, design, geoms = c("boxplot"), mean_fun = NULL, log2_expr = TRUE
 ) {

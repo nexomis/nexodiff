@@ -10,6 +10,7 @@ NULL
 #' @param tr_fn transformation function to apply to data
 #' @param sum_fn aggregation function to apply after transformation
 #' @return A list of count tables per feature
+#' @keywords internal
 summarize_etags <- function(
   annotation, at_gene_level, data, tr_fn, sum_fn
 ) {

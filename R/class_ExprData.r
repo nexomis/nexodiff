@@ -10,8 +10,7 @@
 
 NULL
 
-#' An R6 class representing an RNA-Seq expression dataset.
-#'
+#' @title An R6 class representing an RNA-Seq expression dataset.
 #' @description This class represents a RNA sequencing dataset containing the
 #' following information:
 #'
@@ -71,7 +70,7 @@ NULL
 #' can be used.
 #' @param include_ctrl_at_group_scale whether to include the controls at
 #' group scale
-#' @param dist_method distance method, see philentropy::distance function 
+#' @param dist_method distance method, see philentropy::distance function
 #' for available methods
 #' @param hclust_method hierarchical clustering method (see hclust function)
 #' @param dim_reduce reduction before clustering (not yet implemented)
@@ -101,11 +100,10 @@ NULL
 #' "code"
 #' Note that unexpected columns will be ignored.
 #' Default is null meaning that there is no filtering.
-
 ExprData <- R6::R6Class("ExprData", # nolint
   public = list(
 
-    #' @title Show expression summary per tax_id, tax_name and rna type for
+    #' Show expression summary per tax_id, tax_name and rna type for
     #' selected expressed tags
     #' @description
     #' This function computes a summary per tax_id, tax_name and rna type for
@@ -137,7 +135,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
       )
     },
 
-    #' @title Plot results from show_etags_summary.
+    #' Plot results from show_etags_summary.
     #' @param tr_fn A function to transform the expression values before
     #' summarizing. Default is identity function (no transformation).
     #' @param sum_fn A function to aggregate the transformed values. Default
@@ -185,8 +183,54 @@ ExprData <- R6::R6Class("ExprData", # nolint
       )
     },
 
+    #' Compute and set inter normalization factors
     #' @description
     #' Compute and set inter normalization factors
+    #' @description
+    #' This function computes scaling factors using a ratio-based
+    #' method to correct for systematic technical biases between samples, such
+    #' as differences in sequencing depth or library composition. By default, it
+    #' performs Median Ratio Normalization (MRN), as `norm_mean` is `"median"`
+    #' and M-value trimming is disabled (`m_trim_prop = 0`). It can be
+    #' configured to perform TMM-style normalization by setting `m_trim_prop`
+    #' and norm_mean="geometric"` or `norm_mean="mod.geometric"`. Note that the
+    #' weigthed mean for TMM is not available yet.
+    #'
+    #' The normalization process is as follows:
+    #' 1.  **Reference Selection**: A reference expression profile is created
+    #' from samples chosen via `ref_type` and `ref_samples`. Gene expression
+    #' values are averaged using the `ref_mean` method.
+    #' 2.  **Target Processing**: For each target sample or group (`norm_by`), a
+    #' target expression profile is created using `tgt_mean`.
+    #' 3.  **M and A Vector Calculation**:
+    #'     - The **A-vector** (average expression) is used to filter out
+    #'     low-expression genes, which can be noisy.
+    #'     - The **M-vector** (expression ratio: target/reference) is used to
+    #'     derive the normalization factor from its central tendency.
+    #' 4.  **Trimming Process**: A sequential trimming process refines the set
+    #' of genes used for normalization:
+    #'     - **A-vector trimming**: Genes with average expression below
+    #'     `a_trim_value` are removed.
+    #'     - **M-vector trimming**: A proportion (`m_trim_prop`) of genes with
+    #'     the most extreme expression ratios are removed. This is disabled by
+    #'     default (`m_trim_prop = 0`).
+    #'     - **Extreme ratio trimming**: If `trim_extreme` is `TRUE`, genes with
+    #'     infinite or zero ratios are removed. This is advised when `norm_mean`
+    #'     is not `"median"` or when `m_trim_prop` is too small to remove these
+    #'     values.
+    #' 5.  **Factor Calculation**: The final normalization factor is computed by
+    #' applying `norm_mean` to the ratio (M-vector) of the remaining genes.
+    #' 6.  **Normalization Scope (`norm_scale`)**: This parameter determines the
+    #' scope and reference for normalization.
+    #'     - **`design`**: Normalization is performed across all samples at once
+    #'     This is the generally recommended approach as it makes all samples
+    #'     comparable across the entire experiment.
+    #'     - **`batch`** or **`group`**: Normalization is performed
+    #'     independently within each context. This can mitigate biases if a
+    #'     particular batch or group is compositionally very different. However,
+    #'     it renders data comparable only *within* that same context
+    #'     (e.g., within a batch), not across the entire design.
+    #'
     #' @param norm_scale Scale to apply the normalization:
     #' - "design" for all samples in one go
     #' - "batch" for applying norm_factors per batch
@@ -205,41 +249,42 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' - "ctrl" for using only control samples as reference
     #' - "specified" for using specific samples `ref_samples` as reference
     #' @param ref_samples Samples to use as reference for normalization.
-    #' @param ref_mean Method for the mean of gene expression between samples of
-    #' the reference.
-    #' - "median"
-    #' - "geometric"
-    #' - "nz.geometric" geometric without zero
-    #' - "mod.geometric" modified geometric with epsilon = 1e-05
-    #' (see https://arxiv.org/abs/1806.06403)
-    #' - "arithmetic"
+    #' @param ref_mean Method for averaging gene expression across reference
+    #'   samples. It is recommended to use the same method for `ref_mean`,
+    #'   `tgt_mean`, and `a_mean`.
+    #'   - **`"arithmetic"`**: Recommended when using library size-scaled
+    #'   intra-normalization (e.g., "tpm", "fpkm", "fpm"). This preserves the
+    #'   sum of proportions.
+    #'   - **`"geometric"`**: Recommended when intra-normalization does not
+    #'   account for library size (e.g., "none", "fpk"). The library size effect
+    #'   is then absorbed into the inter-sample normalization factor. This
+    #'   approach, with "none" intra-normalization, mirrors the default
+    #'   behavior in DESeq2. Note that this can be problematic if normalization
+    #'   is performed per group (`norm_by = "group"`).
+    #'   - Other options: `"median"`, `"nz.geometric"`, `"mod.geometric"`.
     #' @param norm_mean Method for the mean of ratios between the target and the
     #' reference. See `ref_mean` for possible values.
-    #' @param tgt_mean Method for the mean of gene expression between target
-    #' samples prior to the calculation of M and A vector.
-    #' @param a_mean Method for the mean of gene expression between target and
-    #' reference samples for the calculation of A vector.
+    #' @param tgt_mean Method for averaging gene expression across target
+    #'   samples. See `ref_mean` for recommended usage and available options.
+    #' @param a_mean Method for averaging gene expression between target and
+    #'   reference samples to calculate the A-vector. See `ref_mean` for
+    #'   recommended usage and available options.
     #' @param a_trim_value Value for trimming the A vector.
     #' @param m_trim_prop Proportion of values to trim from the M vector.
     #' @param trim_extreme Whether to trim extreme values from the M vector,
     #' before calculating the mean. If the mean function `norm_mean` is not
     #' "median", extreme values will causes issues with the calculation of the
     #' mean.
-    #' @details TODO: add details:
-    #' - explain the processus citing the args using `args`
-    #' - explain what is the M and A vector
-    #' - explain the triming processus (order)
-    #' - explain anything that might be usefull.
-    compute_and_set_inter_norm_fact <- function( # nolint: object_length_linter.
-      norm_scale = "group", norm_by = "sample",
+    compute_and_set_inter_norm_fact = function( # nolint: object_length_linter.
+      norm_scale = "design", norm_by = "sample",
       ref_type = "all", ref_samples = NULL,
-      ref_mean = "mod.geometric", norm_mean = "median",
-      tgt_mean = "mod.geometric", a_mean = "mod.geometric", a_trim_value = 1,
+      ref_mean = "arithmetic", norm_mean = "median",
+      tgt_mean = "arithmetic", a_mean = "arithmetic", a_trim_value = 1,
       m_trim_prop = 0, trim_extreme = FALSE
     ) {
 
       private$inter_norm_fact <- compute_inter_norm(
-        private$raw, private$intra_norm_fact,
+        self$get_raw(), private$intra_norm_fact,
         ref_type, ref_samples, private$design, norm_scale, norm_by,
         ref_mean, norm_mean, tgt_mean, a_mean,
         a_trim_value, m_trim_prop, trim_extreme
@@ -302,10 +347,23 @@ ExprData <- R6::R6Class("ExprData", # nolint
 
     #' @description
     #' Filter and get raw count matrix
+    #' @param include_ctrl when in_group is specified, will include batch ctrl
     #' @return interger matrix with raw counts for expressed tags
-    filter_and_get_raw = function(in_batch = NULL, in_group = NULL) {
-      private$raw[private$selected_ids,
-        private$design$extract_sample_names(in_batch, in_group)]
+    filter_and_get_raw = function(in_batch = NULL, in_group = NULL,
+      include_ctrl = FALSE
+    ) {
+      ids <- private$design$extract_sample_names(in_batch, in_group)
+      if (include_ctrl) {
+        assert_that(! is.null(in_group))
+        ctrl_group <- private$design$find_control_group_per_batches()[in_batch]
+        ids <- unique(
+          ids, private$design$extract_sample_names(in_batch, ctrl_group)
+        )
+      }
+      private$raw[
+        private$selected_ids,
+        private$design$extract_sample_names(in_batch, in_group)
+      ]
     },
 
     #' @description
@@ -320,20 +378,28 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' @return numeric matrix with effective length  for expressed tags
     filter_and_get_len = function(in_batch = NULL, in_group = NULL) {
       private$len[private$selected_ids,
-        private$design$extract_sample_names(in_batch, in_group)]
+                  private$design$extract_sample_names(in_batch, in_group)]
     },
 
     #' @description
     #' Get normalization factors matrix
+    #' @param include_ctrl if TRUE and if `in_batch` and `in_group` are
+    #' specified, control samples from the specified batch will be included.
+    #' @param rescale_inter_norm Rescale inter-sample normalization factors so
+    #' that their geometric mean is 1. Default is TRUE.
     #' @return Numeric matrix with normalization factors for expressed tags
-    compute_norm_fact = function(in_batch = NULL, in_group = NULL,
-      inter_norm = FALSE, intra_norm = TRUE) {
+    compute_norm_fact = function(
+      in_batch = NULL, in_group = NULL, inter_norm = FALSE, intra_norm = TRUE,
+      include_ctrl = FALSE, rescale_inter_norm = TRUE
+    ) {
       compute_norm_fact_helper(
         private$selected_ids, private$design, private$intra_norm_fact,
         private$inter_norm_fact, private$inter_norm_fact_opts,
-        in_batch, in_group, inter_norm, intra_norm
+        in_batch, in_group, inter_norm, intra_norm, include_ctrl,
+        rescale_inter_norm
       )
     },
+
 
     #' @description
     #' Get intra normalization method
@@ -359,16 +425,26 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' Note that intra normalization is always applied, however inter norm is
     #' optional. Depending on the `norm_scale` used for inter normalization,
     #' the `in_batch` argument might be mandatory.
+    #' @param include_ctrl include control samples in the normalization
+    #' @param rescale_inter_norm Rescale inter-sample normalization factors so
+    #' that their geometric mean is 1. Default is TRUE.
     #' @return numeric matrix with norm counts for expressed tags
     compute_norm = function(
       in_batch = NULL, in_group = NULL,
-      intra_norm = TRUE, inter_norm = FALSE
+      intra_norm = TRUE, inter_norm = FALSE, include_ctrl = FALSE,
+      rescale_inter_norm = TRUE
     ) {
       if (intra_norm) {
-        self$filter_and_get_raw(in_batch, in_group) *
-          self$compute_norm_fact(in_batch, in_group, inter_norm = inter_norm)
+        self$filter_and_get_raw(in_batch, in_group, include_ctrl) *
+          self$compute_norm_fact(
+            in_batch, in_group,
+            inter_norm = inter_norm, intra_norm = intra_norm,
+            include_ctrl = include_ctrl,
+            rescale_inter_norm = rescale_inter_norm
+          )
       } else {
-        self$filter_and_get_raw(in_batch, in_group)
+        assert_that(! inter_norm)
+        self$filter_and_get_raw(in_batch, in_group, include_ctrl)
       }
     },
 
@@ -380,6 +456,44 @@ ExprData <- R6::R6Class("ExprData", # nolint
     },
 
     #' @description
+    #' Get the intra normalization factor
+    #' @return numeric matrix with intra normalization factor
+    get_intra_norm_fact = function(in_batch = NULL, in_group = NULL) {
+      if (is.null(in_batch) && is.null(in_group)) {
+        private$intra_norm_fact[private$selected_ids, ]
+      } else {
+        assert_that(! is.null(in_batch))
+        private$intra_norm_fact[
+          private$selected_ids,
+          private$design$extract_sample_names(in_batch, in_group)
+        ]
+      }
+    },
+    #' @description
+    #' Get the inter normalization factor
+    #' @param rescale Rescale the factors so that their geometric mean is 1.
+    get_inter_norm_fact = function(in_batch = NULL, in_group = NULL,
+                                   rescale = TRUE) {
+      assert_that(!is.null(private$inter_norm_fact))
+      norm_scale <- private$inter_norm_fact_opts$norm_scale
+      assert_that(! (norm_scale != "design" && is.null(in_batch)))
+      assert_that(! (norm_scale == "group" && is.null(in_group)))
+      inter_norm_factors <- switch(private$inter_norm_fact_opts$norm_scale,
+        design = private$inter_norm_fact,
+        batch = private$inter_norm_fact[[in_batch]],
+        group = private$inter_norm_fact[[in_batch]][[in_group]]
+      )
+      sample_names <- private$design$extract_sample_names(in_batch, in_group)
+      inter_norm_factors <- inter_norm_factors[sample_names]
+
+      if (rescale && !is.null(inter_norm_factors) &&
+          length(inter_norm_factors) > 0) {
+        inter_norm_factors <- inter_norm_factors /
+          exp(mean(log(inter_norm_factors)))
+      }
+      inter_norm_factors
+    },
+#' @description
     #' Get the main expression tag id. The tag id corresponds to the unique id
     #' linked with a expression point. It can be tx_id (for transcript id) or
     #' "tgid" for "typed gene id". Why typed gene ID ? because some genes have
@@ -390,7 +504,6 @@ ExprData <- R6::R6Class("ExprData", # nolint
     get_main_etag = function() {
       private$main_etag
     },
-
     #' @description
     #' Whether the expression data is at gene level or not.
     #' @return T or F
@@ -476,7 +589,11 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' - "ctrl_samples" : vector with control sample names
     #' - "design_table" : design table only for those samples
     #' - "ctrl_group" : the control group
-    extract_pairwise_data_with_design = function(in_batch, in_group) {
+    #' @param rescale_inter_norm Rescale inter-sample normalization factors so
+    #' that their geometric mean is 1. Default is TRUE.
+    extract_pairwise_data_with_design = function(
+      in_batch, in_group, rescale_inter_norm
+    ) {
       group_per_batches <-
         private$design$list_groups_per_batches(include_ctrl = TRUE)
 
@@ -513,8 +630,8 @@ ExprData <- R6::R6Class("ExprData", # nolint
         in_batch, all_groups, inter_norm = FALSE, intra_norm = TRUE
       )[, results$all_samples]
 
-      results$inter_norm_fact <- self$compute_norm_fact(
-        in_batch, all_groups, inter_norm = TRUE, intra_norm = FALSE
+      results$inter_norm_fact <- self$get_inter_norm_fact(
+        in_batch, all_groups, rescale_inter_norm
       )[results$all_samples]
 
       results$design_table <-
@@ -550,17 +667,14 @@ ExprData <- R6::R6Class("ExprData", # nolint
 
     #' @description
     #' Function to draw PCA plots
-    #' @param in_batch (optional) A character vector specifying the batch(es) to include.
-    #' @param in_group (optional) A character vector specifying the group(s) to include.
-    #' @param intra_norm A boolean indicating whether to apply intra-sample normalization.
-    #' @param inter_norm A boolean indicating whether to apply inter-sample normalization.
     #' @param tr_fn data transformation function
     #' @param plot_scale At which scale are the samples correlated.
     #' @param ggplot_mod ggplot modifier that will be added to the graph.
     #' @param color_palette name of the palette of color to use
     #' @param prcomp_args args to be used with prcomp.
     #' @param prcomp_autoplot_args list of argument that are used with autoplot.
-    #' @param include_ctrl_at_group_scale whether to include the controls at group scale
+    #' @param include_ctrl_at_group_scale whether to include the controls at
+    #' group scale
     #' @param tags vector of tag ids to use for the plot
     #' @param tag_type name of the tag type to use
     #' @param df_design_filter data frame to filter samples
@@ -586,14 +700,11 @@ ExprData <- R6::R6Class("ExprData", # nolint
 
     #' @description
     #' Function to draw correlation plots
-    #' @param in_batch (optional) A character vector specifying the batch(es) to include.
-    #' @param in_group (optional) A character vector specifying the group(s) to include.
-    #' @param intra_norm A boolean indicating whether to apply intra-sample normalization.
-    #' @param inter_norm A boolean indicating whether to apply inter-sample normalization.
     #' @param tr_fn data transformation function
     #' @param plot_scale At which scale are the samples correlated.
     #' @param ggplot_mod ggplot modifier that will be added to the graph.
-    #' @param include_ctrl_at_group_scale whether to include the controls at group scale
+    #' @param include_ctrl_at_group_scale whether to include the controls at
+    #' group scale
     #' @param tags vector of tag ids to use for the plot
     #' @param tag_type name of the tag type to use
     #' @param df_design_filter data frame to filter samples
@@ -618,10 +729,6 @@ ExprData <- R6::R6Class("ExprData", # nolint
 
     #' @description
     #' Function to draw hierarchical clustering plots
-    #' @param in_batch (optional) A character vector specifying the batch(es) to include.
-    #' @param in_group (optional) A character vector specifying the group(s) to include.
-    #' @param intra_norm A boolean indicating whether to apply intra-sample normalization.
-    #' @param inter_norm A boolean indicating whether to apply inter-sample normalization.
     #' @param tr_fn data transformation function
     #' @param plot_scale At which scale are the samples correlated.
     #' @param ggplot_mod ggplot modifier that will be added to the graph.
@@ -633,7 +740,8 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' @param height_main height value for main graph
     #' @param width_main width value for main graph
     #' @param prcomp_args args to be used with prcomp.
-    #' @param include_ctrl_at_group_scale whether to include the controls at group scale
+    #' @param include_ctrl_at_group_scale whether to include the controls at
+    #' group scale
     #' @param tags vector of tag ids to use for the plot
     #' @param tag_type name of the tag type to use
     #' @param df_design_filter data frame to filter samples
@@ -701,7 +809,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
     ) {
       # Check arguments
       plot_complex_check(
-        plot_scale,inter_norm, private$inter_norm_fact_opts, in_batch
+        plot_scale, inter_norm, private$inter_norm_fact_opts, in_batch
       )
 
       # Prepare tag selection
@@ -731,9 +839,10 @@ ExprData <- R6::R6Class("ExprData", # nolint
               in_data <- cbind(in_data, ctrl_data)
             }
             selected_samples <- intersect(
-              unique(dplyr::filter(df_design_filter,
-                .data$batch == .env$x & .data$group == .env$y)$sample),
-              colnames(in_data)
+              unique(dplyr::filter(
+                df_design_filter,
+                .data$batch == .env$x & .data$group == .env$y
+              )$sample), colnames(in_data)
             )
             in_data <- in_data[selected_tag_ids, selected_samples]
             in_title <- paste(
@@ -775,9 +884,10 @@ ExprData <- R6::R6Class("ExprData", # nolint
               data <- self$filter_and_get_raw(x, in_group)
             }
             selected_samples <- intersect(
-              unique(dplyr::filter(df_design_filter,
-                .data$batch == .env$x)$sample),
-              colnames(data)
+              unique(dplyr::filter(
+                df_design_filter, .data$batch == .env$x
+              )$sample)
+              , colnames(data)
             )
             data <- data[selected_tag_ids, selected_samples]
             in_title <- private$design$get_b_labels()[x]
@@ -907,9 +1017,10 @@ ExprDataGene <- R6::R6Class("ExprDataGene", # nolint
       private$raw <- as.data.frame(expr_data_transcript$get_raw())
       private$raw$gene <-
         txid2tgid[row.names(private$raw)]
-      private$raw <- as.data.frame(private$raw %>%
-        dplyr::group_by(gene) %>%
-        dplyr::summarise(dplyr::across(tidyselect::everything(), sum))
+      private$raw <- as.data.frame(
+        private$raw %>%
+          dplyr::group_by(gene) %>%
+          dplyr::summarise(dplyr::across(tidyselect::everything(), sum))
       )
       row.names(private$raw) <- private$raw$gene
       private$raw$gene <- NULL
@@ -938,9 +1049,10 @@ ExprDataGene <- R6::R6Class("ExprDataGene", # nolint
         # Summarize normalized values for later depondaration
         norm <- as.data.frame(norm)
         norm$gene <- txid2tgid[row.names(norm)]
-        g_norm <- as.data.frame(norm %>%
-          dplyr::group_by(gene) %>%
-          dplyr::summarise(dplyr::across(tidyselect::everything(), sum))
+        g_norm <- as.data.frame(
+          norm %>%
+            dplyr::group_by(gene) %>%
+            dplyr::summarise(dplyr::across(tidyselect::everything(), sum))
         )
         row.names(g_norm) <- g_norm$gene
         g_norm$gene <- NULL
@@ -950,9 +1062,10 @@ ExprDataGene <- R6::R6Class("ExprDataGene", # nolint
         # Summarize ponderated lengths
         private$len$gene <-
           txid2tgid[row.names(private$len)]
-        private$len <- as.data.frame(private$len %>%
-          dplyr::group_by(gene) %>%
-          dplyr::summarise(dplyr::across(tidyselect::everything(), sum))
+        private$len <- as.data.frame(
+          private$len %>%
+            dplyr::group_by(gene) %>%
+            dplyr::summarise(dplyr::across(tidyselect::everything(), sum))
         )
         row.names(private$len) <- private$len$gene
         private$len$gene <- NULL
@@ -1074,3 +1187,4 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
     }
   )
 )
+

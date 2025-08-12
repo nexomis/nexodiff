@@ -11,6 +11,7 @@ NULL
 #' @param filtered_var see ExprData$filter_and_set_selected_ids
 #' @param filter_type see ExprData$filter_and_set_selected_ids
 #' @return Vector of filtered expression tag IDs
+#' @keywords internal
 filter_etags <- function(
   current_selected_ids, annotation, main_etag,
   values, filtered_var = "type", filter_type = "keep"
@@ -22,7 +23,8 @@ filter_etags <- function(
   }
 
   filter_dict <- annotation$generate_translate_dict(
-    main_etag, filtered_var)
+    main_etag, filtered_var
+  )
 
   if (filter_type == "keep") {
     keep_ids <- names(filter_dict)[filter_dict %in% values]

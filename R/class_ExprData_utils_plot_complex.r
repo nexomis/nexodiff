@@ -14,12 +14,12 @@ NULL
 #' @param include_ctrl_at_group_scale Whether to include controls at group scale
 #' @param tr_fn Data transformation function
 #' @return List with prepared data and metadata
+#' @keywords internal
 prepare_complex_plot_data <- function(
   selected_ids, design, in_data, in_batch = NULL, in_group = NULL,
   df_design_filter = NULL, plot_scale = "group",
   include_ctrl_at_group_scale = FALSE, tr_fn = NULL
 ) {
-  
   # Apply data transformation if provided
   if (!is.null(tr_fn)) {
     tr_fn_df <- function(df) {
@@ -95,6 +95,7 @@ prepare_complex_plot_data <- function(
 #' @param tags Vector of tag ids to use for the plot
 #' @param tag_type Type of tag to use
 #' @return Vector of selected tag IDs
+#' @keywords internal
 prepare_tag_selection <- function(
   main_etag, annotation, selected_ids, tags = NULL, tag_type = NULL
 ) {
@@ -128,6 +129,7 @@ prepare_tag_selection <- function(
 #' @param ggplot_mod Additional ggplot modifications
 #' @param color_palette Color palette name
 #' @return ggplot object
+#' @keywords internal
 create_prcomp_plot <- function(
   in_data, in_title, data_design, prcomp_args = list(),
   prcomp_autoplot_args = list(), ggplot_mod = NULL,
@@ -155,6 +157,7 @@ create_prcomp_plot <- function(
 #' @param in_title Plot title
 #' @param ggplot_mod Additional ggplot modifications
 #' @return ggplot object (ggmatrix)
+#' @keywords internal
 create_corr_plot <- function(
   in_data, in_title, ggplot_mod = NULL
 ) {
@@ -194,6 +197,7 @@ create_corr_plot <- function(
 #' @param prcomp_args Arguments for prcomp
 #' @param ggplot_mod Additional ggplot modifications
 #' @return ggplot object or arranged plots
+#' @keywords internal
 create_hclust_plot <- function(
   in_data, in_title, data_design, dist_method = "euclidean",
   hclust_method = "ward.D2", dim_reduce = NULL, clust_bar_var = c(),
@@ -326,6 +330,7 @@ create_hclust_plot <- function(
 #'
 #' @param graphs List of ggplot objects
 #' @return Arranged plot grid
+#' @keywords internal
 arrange_complex_plots <- function(graphs) {
   p <- cowplot::plot_grid(
     plotlist = graphs,
@@ -341,6 +346,7 @@ arrange_complex_plots <- function(graphs) {
 #' @param inter_norm_fact_opts Inter normalization options
 #' @param in_batch Batch filter
 #' @return NULL (stops execution if checks fail)
+#' @keywords internal
 plot_complex_check <- function(
   plot_scale, inter_norm, inter_norm_fact_opts, in_batch
 ) {

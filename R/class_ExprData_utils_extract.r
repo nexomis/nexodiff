@@ -12,7 +12,9 @@ NULL
 #' @param in_batch see ExprData$extract_pairwise_data_with_design
 #' @param in_group see ExprData$extract_pairwise_data_with_design
 #' @param include_ctrl see ExprData$extract_pairwise_data_with_design
-#' @return list with selected attributes (see ExprData$extract_pairwise_data_with_design)
+#' @return list with selected attributes (see ExprData$extract_pairwise
+#' @keywords internal
+#' data_with_design)
 extract_pairwise_data <- function(
   design, raw_matrix, len_matrix, intra_norm_fact_matrix, inter_norm_fact,
   in_batch, in_group, include_ctrl = TRUE

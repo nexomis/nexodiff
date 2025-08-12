@@ -20,13 +20,23 @@ THEME_NEXOMIS <- ggplot2::theme_classic() + ggplot2::theme(
   plot.title = ggtext::element_textbox(hjust = 0.5)
 )
 
+#' Color palette for nexomis: Down blue
+#' @export
 DOWN_COLOR <- "#313695" # nolint
+#' Color palette for nexomis: Up red
+#' @export
 UP_COLOR <- "#A50026" # nolint
+#' Color palette for nexomis: Mid yellow-white
+#' @export
 MID_COLOR <- "#FFFFBF" # nolint
+#' Color palette for nexomis: Down blue
+#' @export
 NA_COLOR <- "#474747" # nolint
-
+#' Color palette gradient for nexomis
+#' from UP red to DOWN blue through MID yellow-white
+#' @export
 UP_TO_DOWN_GRADIENT_COLORS <- c( # nolint
-  UP_COLOR, "#D73027", "#F46D43",
+   UP_COLOR, "#D73027", "#F46D43",
   "#FDAE61", "#FEE090", MID_COLOR,
   "#E0F3F8", "#ABD9E9", "#74ADD1",
   "#4575B4", DOWN_COLOR)
@@ -117,9 +127,19 @@ simple_chord <- function(data, superset_colname = "batch",
 
 }
 
-# geometric mean from https://arxiv.org/abs/1806.06403
+#' Modified geometric mean function
+#' @description
+#' Modified geometric mean function to avoid zero values.
+#' In brief, the function adds a delta value to the dataset to avoid zeros.
+#' It optimize the delta value to be added to the dataset until the difference
+#' between (i) the geometric mean of the non zero values in the dataset
+#' and the geometric mean of the same values plus delta is less than epsilon.
+#' see https://arxiv.org/abs/1806.06403
+#' Thanks to Roberto de la Cruz for the implementation (06/05/2020)
+#' @param dataset vector of values
+#' @param epsilon epsilon value to optimize the delta value added to the dataset
+#' @export
 geom_mean_modified <- function(dataset, epsilon) {
-  #Roberto de la Cruz, 06/05/2020
   if (sum(dataset) == 0) {
     return(0)
   }
@@ -152,31 +172,28 @@ geom_mean_modified <- function(dataset, epsilon) {
   exp(mean(log(dataset + delta))) - delta
 }
 
-# set mean function
-set_mean_function <- function(mean_arg) {
-  if (mean_arg == "geometric") {
-    return(function(x) (exp(mean(log(x)))))
-  } else if (mean_arg == "mod.geometric") {
-    return(function(x) (geom_mean_modified(x, 1e-05)))
-  }else if (mean_arg == "arithmetic") {
-    return(function(x) (mean(x)))
-  } else if (mean_arg == "median") {
-    return(function(x) (median(x)))
-  } else if (mean_arg == "nz.geometric") {
-    return(function(x) {
-      if (sum(x) == 0) {
-        res <- 0
-      } else {
-        res <- exp(mean(log(x)))
-      }
-      res
-    })
-  } else {
-    logging::error("mean function not recognized")
-  }
+#' Helper function to set mean function based on method name
+#'
+#' @param method_name Method name for mean calculation
+#' @return Function for computing mean
+#' @keywords internal
+set_mean_function <- function(
+  method_name = c(
+    "median", "geometric", "nz.geometric", "mod.geometric", "arithmetic"
+  )
+) {
+  method_name <- match.arg(method_name)
+  switch(
+    method_name,
+    median = stats::median,
+    geometric = function(x) exp(mean(log(x))),
+    nz.geometric = function(x) exp(mean(log(x[x != 0]))),
+    mod.geometric = function(x) geom_mean_modified(x, 1e-5),
+    arithmetic = mean
+  )
 }
 
-# Utils function to generate file paths for counts files and check 
+# Utils function to generate file paths for counts files and check
 # their existence
 get_counts_file_path <- function(src_dir, sample_name) {
   # Construct the potential file paths

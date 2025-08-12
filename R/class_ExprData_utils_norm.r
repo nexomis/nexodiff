@@ -2,35 +2,13 @@
 #' @include utils.r
 NULL
 
-#' Helper function to set mean function based on method name
-#'
-#' @param method_name Method name for mean calculation
-#' @return Function for computing mean
-set_mean_function <- function(method_name) {
-  rfun <- NULL
-  if (method_name == "median") {
-    rfun <- stats::median
-  } else if (method_name == "geometric") {
-    rfun <- function(x) exp(mean(log(x)))
-  } else if (method_name == "nz.geometric") {
-    rfun <- function(x) exp(mean(log(x[x != 0])))
-  } else if (method_name == "mod.geometric") {
-    rfun <- function(x) exp(mean(log(x + 1e-05)))
-  } else if (method_name == "arithmetic") {
-    rfun <- mean
-  } else {
-    logging::logerror("Unrecognized mean function method")
-    stop(1)
-  }
-  rfun
-}
-
 #' Helper function for median normalization factor calculation
 #'
 #' @param tgt_vector target expression vector
 #' @param ref_vector reference expression vector
 #' @param mean_fun mean function
 #' @return normalization factors
+#' @keywords internal
 calc_norm_fac <- function(tgt_vector, ref_vector, norm_mean_fun,
                           trim_extreme) {
   keep_row <- !(tgt_vector == 0 & ref_vector == 0)
@@ -52,7 +30,7 @@ calc_norm_fac <- function(tgt_vector, ref_vector, norm_mean_fun,
     }
   }
 
-  norm_mean_fun(ratios)
+  1 / norm_mean_fun(ratios)
 }
 
 #' Main helper function for normalization factor calculation
@@ -65,6 +43,7 @@ calc_norm_fac <- function(tgt_vector, ref_vector, norm_mean_fun,
 #' @param a_trim_value trim value for A vector
 #' @param m_trim_prop trim proportion for M vector
 #' @param grouped_samples grouped samples
+#' @keywords internal
 main_calc_norm_fac <- function(
   mat, ref_mat, ref_mean_fun, norm_mean_fun, tgt_mean_fun,
   a_mean_fun, a_trim_value, m_trim_prop, grouped_samples, trim_extreme
@@ -105,6 +84,7 @@ main_calc_norm_fac <- function(
 #' - "ctrl": use control samples as reference
 #' - "specified": use specified samples as reference
 #' @param ref_samples specified reference samples
+#' @keywords internal
 get_reference_ids <- function(
   ids,
   ctrl_samples,
@@ -135,13 +115,16 @@ get_reference_ids <- function(
 #' @param mean_fun mean function to compute average
 #' @param a_trim_value trim value
 #' @param m_trim_prop trim proportion top and bottom
+#' @return trimmed ids
+#' @keywords internal
 get_trimmed_ids <- function(
   trim_ref, trim_grp, mean_fun, a_trim_value, m_trim_prop
 ) {
   assert_that(! is.null(names(trim_ref)))
   if (a_trim_value > 0) {
     a_vector <- apply(
-      matrix(c(trim_ref, trim_grp), byrow = FALSE, ncol = 2), 1, mean_fun
+      matrix(c(trim_ref, trim_grp), byrow = FALSE, ncol = 2,
+             dimnames = list(names(trim_ref), c("ref", "grp"))), 1, mean_fun
     )
     ids <- names(a_vector[a_vector > a_trim_value])
   } else {
@@ -173,6 +156,7 @@ get_trimmed_ids <- function(
 #' @param a_trim_value trim value for A
 #' @param m_trim_prop trim proportion for M
 #' @return inter norm fact matrix
+#' @keywords internal
 compute_inter_norm <- function(
   raw, norm_fact, ref_type, ref_samples, design, norm_scale, norm_by, ref_mean,
   norm_mean, tgt_mean, a_mean, a_trim_value, m_trim_prop, trim_extreme = FALSE
@@ -183,7 +167,7 @@ compute_inter_norm <- function(
   a_mean_fun <- set_mean_function(a_mean)
   assert_that(norm_scale %in% c("design", "batch", "group"))
   assert_that(norm_by %in% c("sample", "group"))
-  batches <- design$list_batches
+  batches <- design$list_batches()
   batch2ctrl <- design$find_control_group_per_batches()
   mat <- norm_fact * raw
   switch(
@@ -195,7 +179,7 @@ compute_inter_norm <- function(
       )))
       ref_ids <- get_reference_ids(colnames(mat), ctrl_ids, ref_type,
                                    ref_samples)
-      data_design <- unique(design$get_design()[c("batch", "group")])
+      data_design <- unique(design$get_pairwise_design()[c("batch", "group")])
       grouped_samples <-  switch(
         norm_by,
         group = purrr::map2(
@@ -287,6 +271,7 @@ compute_inter_norm <- function(
 #' @param raw_matrix raw count matrix
 #' @param len_matrix length matrix
 #' @return intra normalization factor matrix
+#' @keywords internal
 compute_intra_norm_factor <- function(
   method, selected_ids, raw_matrix, len_matrix
 ) {
@@ -357,64 +342,89 @@ compute_intra_norm_factor <- function(
 #' @param in_group see ExprData$compute_norm_fact
 #' @param inter_norm see ExprData$compute_norm_fact
 #' @param intra_norm see ExprData$compute_norm_fact
+#' @param include_ctrl if TRUE and if `in_batch` and `in_group` are
+#' specified, control samples from the specified batch will be included.
+#' @param rescale_inter_norm Rescale inter-sample normalization factors so
+#' that their geometric mean is 1. Default is TRUE.
 #' @return normalization factor matrix
+#' @keywords internal
 compute_norm_fact_helper <- function(
   selected_ids, design, intra_norm_fact, inter_norm_fact,
   inter_norm_fact_opts, in_batch = NULL, in_group = NULL,
-  inter_norm = FALSE, intra_norm = TRUE
+  inter_norm = FALSE, intra_norm = TRUE, include_ctrl = FALSE,
+  rescale_inter_norm = TRUE
 ) {
+
+  assert_that((!inter_norm) || (inter_norm && intra_norm),
+    msg = "`intra_norm` cannot be FALSE if `inter_norm` is TRUE"
+  )
+
   row_ids <- selected_ids
   col_ids <- design$extract_sample_names(in_batch, in_group)
 
+  if (include_ctrl && !is.null(in_batch) && !is.null(in_group)) {
+    batch2ctrl <- design$find_control_group_per_batches()
+    ctrl_group <- batch2ctrl[[in_batch]]
+    if (!is.null(ctrl_group)) {
+      ctrl_ids <- design$extract_sample_names(in_batch, ctrl_group)
+      col_ids <- unique(c(col_ids, ctrl_ids))
+    }
+  }
+
   if (intra_norm) {
-    norm_fact <- intra_norm_fact[row_ids, col_ids]
+    norm_fact <- intra_norm_fact[row_ids, col_ids, drop = FALSE]
   } else {
-    norm_fact <- NULL
+    norm_fact <- matrix(
+      1, dimnames = list(row_ids, col_ids), nrow = length(row_ids),
+      ncol = length(col_ids)
+    )
   }
 
   norm_fact_inter <- NULL
 
   if (inter_norm) {
-    if (!is.null(inter_norm_fact)) {
-      if (inter_norm_fact_opts$norm_scale == "design") {
-        norm_fact_inter <- inter_norm_fact[col_ids]
-      } else {
-        if (is.null(in_batch)) {
-          logging::logerror(
-            "`in_batch` cannot be null when norm scale is not design"
-          )
-          stop(1)
-        }
-        if (inter_norm_fact_opts$norm_scale == "batch") {
-          norm_fact_inter <- inter_norm_fact[[in_batch]][col_ids]
-        } else {
-          if (is.null(in_group)) {
-            logging::logerror(
-              "`in_group` cannot be null when norm scale is group"
-            )
-            stop(1)
-          }
-          norm_fact_inter <-
-            inter_norm_fact[[in_batch]][[in_group]][col_ids]
-        }
-      }
-    } else {
+    if (is.null(inter_norm_fact)) {
       norm_fact_inter <- rep(1, length(col_ids))
       names(norm_fact_inter) <- col_ids
-    }
-  }
-  if (!is.null(norm_fact_inter)) {
-    if (intra_norm) {
-      norm_fact <- sweep(norm_fact, 2, norm_fact_inter[col_ids], FUN = "*")
     } else {
-      norm_fact <- norm_fact_inter[col_ids]
+      norm_scale <- inter_norm_fact_opts$norm_scale
+      norm_fact_inter <- switch(
+        norm_scale,
+        design = {
+          inter_norm_fact[col_ids]
+        },
+        batch = {
+          assert_that(!is.null(in_batch),
+            msg = "`in_batch` cannot be null when norm scale is 'batch'"
+          )
+          inter_norm_fact[[in_batch]][col_ids]
+        },
+        group = {
+          assert_that(!is.null(in_batch),
+            msg = "`in_batch` cannot be null when norm scale is 'group'"
+          )
+          assert_that(!is.null(in_group),
+            msg = "`in_group` cannot be null when norm scale is 'group'"
+          )
+          inter_norm_fact[[in_batch]][[in_group]][col_ids]
+        },
+        {
+          logging::logerror("Invalid `norm_scale`: %s",
+            inter_norm_fact_opts$norm_scale)
+          stop(1)
+        }
+      )
+      if (rescale_inter_norm && !is.null(norm_fact_inter)) {
+        norm_fact_inter <- norm_fact_inter /
+          exp(mean(log(norm_fact_inter)))
+      }
     }
   }
-  if (is.null(norm_fact)) {
-    logging::logerror(
-      "`intra_norm` and `inter_norm` cannot be FALSE together"
-    )
-    stop(1)
+
+  if (!is.null(norm_fact_inter)) {
+    norm_fact <- sweep(norm_fact, 2,
+                       norm_fact_inter[colnames(norm_fact)], FUN = "*")
   }
   norm_fact
 }
+
