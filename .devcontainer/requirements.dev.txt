@@ -6,3 +6,4 @@ remotes
 covr
 vdiffr
 devtools
+pkgdown

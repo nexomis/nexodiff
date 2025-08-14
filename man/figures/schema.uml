@@ -1,33 +1,79 @@
 @startuml
-[*] --> PairwiseDesignWithAnnotation
-PairwiseDesignWithAnnotation: * Design of analysis 
-PairwiseDesignWithAnnotation: * Paths to expression files 
-PairwiseDesignWithAnnotation: * Transcriptome annotation
-note left
- **""design_filename""**
- **""annotation_filename""**
- **""idmapping_filename""**
-end note
-PairwiseDesignWithAnnotation --> ExprDataTranscript : **Import data at transcript level**
-ExprDataTranscript : Expression data at transcript level
-ExprDataTranscript --> ExprDataTranscript : **Filtering**
-ExprDataTranscript --> ExprDataTranscript : **Normalization**
-ExprDataTranscript --> ExprDataGene : **Summarization**
-ExprDataGene : Expression data at gene level
-ExprDataGene --> ExprDataGene : **Filtering**
-ExprDataGene --> ExprDataGene : **Normalization**
-ExprDataGene --> PairwiseLFC
-PairwiseLFC: Pairwise Log2FC values
-PairwiseLFC: * group VS control
-PairwiseLFC: * control VS control
-PairwiseLFC --> PairwiseRstanAnalysis
-note right
- **""statistical_models""**
-end note
-PairwiseRstanAnalysis: Bayesian inference of parameters
-PairwiseRstanAnalysis: based on statistical models
-PairwiseRstanAnalysis: modelling LFC distributions
+skinparam note {
+  backgroundColor #EFEFEF
+  borderColor #A80036
+}
+skinparam class {
+  backgroundColor #F8F8F8
+  arrowColor #A80036
+  borderColor #A80036
+}
+
+package "1. Setup" {
+  class Annotation {
+    * Transcript/gene annotations
+    * ID mapping (e.g., UniProt)
+  }
+  note left of Annotation
+   **Input Files:**
+   - GFF/GTF for annotation
+   - (Optional) ID mapping file
+  end note
+
+  class PairwiseDesign {
+    * Design of analysis
+    * Paths to expression files
+  }
+  note right of PairwiseDesign
+   **Input File:**
+   - Design file (YML or CSV)
+  end note
+}
+
+package "2. Data Handling" {
+  class ExprDataTranscript {
+    Expression data at transcript level
+  }
+  Annotation --> ExprDataTranscript
+  PairwiseDesign --> ExprDataTranscript
+
+  ExprDataTranscript --> ExprDataTranscript : **Filtering**
+  ExprDataTranscript --> ExprDataTranscript : **Normalization**
+
+  class ExprDataGene {
+    Expression data at gene level
+  }
+  ExprDataTranscript --> ExprDataGene : **Summarization**
+
+  ExprDataGene --> ExprDataGene : **Filtering**
+  ExprDataGene --> ExprDataGene : **Normalization**
+}
+
+package "3. Analysis" {
+  class PairwiseDESeq2 {
+    Pairwise comparisons
+    using DESeq2
+  }
 ExprDataGene -left-> PairwiseDESeq2
-PairwiseDESeq2: Pairwise comparisons
-PairwiseDESeq2: using DESeq2
+
+  class PairwiseLFC {
+    Pairwise Log2FC values
+    * group VS control
+    * control VS control
+  }
+  ExprDataGene --> PairwiseLFC
+
+  class PairwiseRstanAnalysis {
+    Bayesian inference of parameters
+    based on statistical models
+    modelling LFC distributions
+  }
+  note right of PairwiseRstanAnalysis
+   **""statistical_models""**
+  end note
+  PairwiseLFC --> PairwiseRstanAnalysis
+}
+
+[*] --> Annotation
+[*] --> PairwiseDesign
 @enduml

@@ -17,7 +17,7 @@ Description: Provides classes and functions for performing differential
     statistical methods and visualization tools for analyzing gene expression 
     differences between experimental conditions.
 License: Apache-2.0
-URL: https://github.com/nexomis/nexodiff
+URL: https://github.com/nexomis/nexodiff, https://nexomis.github.io/nexodiff/
 BugReports: https://github.com/nexomis/nexodiff/issues
 Encoding: UTF-8
 LazyData: true

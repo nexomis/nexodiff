@@ -16,3 +16,7 @@
 ^doc
 ^Meta
 ^tests/testthat/fixtures/integration/ena_datasets/ERX1492351_out
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$

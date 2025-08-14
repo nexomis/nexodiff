@@ -75,3 +75,11 @@ test/out_dir
 *gcno
 
 /tests/testthat/fixtures/integration/ena_datasets/ERX1492351_out
+docs
+
+
+# ignore working files
+/debug.R
+/tes*.r
+/.continue
+
