@@ -8,10 +8,13 @@ create_prcomp_plot(
   in_data,
   in_title,
   data_design,
+  pca_plot_dims = c(1, 2),
+  mshape = "batch",
+  mcolor = "group",
   prcomp_args = list(),
-  prcomp_autoplot_args = list(),
   ggplot_mod = NULL,
-  color_palette = "BrBg"
+  color_palette = "BrBG",
+  point_size = 8
 )
 }
 \arguments{
@@ -21,13 +24,19 @@ create_prcomp_plot(
 
 \item{data_design}{Design data frame}
 
-\item{prcomp_args}{Arguments for prcomp}
+\item{pca_plot_dims}{Integer vector specifying which principal components to plot}
 
-\item{prcomp_autoplot_args}{Arguments for autoplot}
+\item{mshape}{Character string specifying variable for point shapes}
+
+\item{mcolor}{Character string specifying variable for point colors}
+
+\item{prcomp_args}{Arguments for prcomp}
 
 \item{ggplot_mod}{Additional ggplot modifications}
 
 \item{color_palette}{Color palette name}
+
+\item{point_size}{Numeric value for point size (default: 8)}
 }
 \value{
 ggplot object

@@ -9,7 +9,7 @@ plot_dist_per_sample_helper(
   design,
   geoms = c("boxplot"),
   mean_fun = NULL,
-  log2_expr = TRUE
+  fn_str
 )
 }
 \arguments{
@@ -21,7 +21,7 @@ plot_dist_per_sample_helper(
 
 \item{mean_fun}{see ExprData$plot_dist_per_sample}
 
-\item{log2_expr}{see ExprData$plot_dist_per_sample}
+\item{fn_str}{string representation of y-axis transform}
 }
 \value{
 ggplot2 graph

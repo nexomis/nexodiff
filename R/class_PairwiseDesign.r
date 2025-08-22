@@ -119,6 +119,14 @@ PairwiseDesign <- R6::R6Class( # nolint
     },
 
     #' @description
+    #' get the simplified design with only batch/group/ctrl
+    #' @param include_ctrl whether to include controls
+    #' @return simplified design data.frame
+    get_simple_design = function(include_ctrl = TRUE) {
+      unique(private$pairwise_design[, c("batch", "group", "ctrl")])
+    },
+
+    #' @description
     #' get sample names with simple design-based filtering
     #' @param basename whether to return the basename in place of the complete
     #' name (with run id)
@@ -133,7 +141,7 @@ PairwiseDesign <- R6::R6Class( # nolint
       }
       unique(as.character(dplyr::filter(
         private$pairwise_design,
-          (.data$sample %in% private$selected_samples) &
+        (.data$sample %in% private$selected_samples) &
           (.data$batch %in% in_batch | is.null(in_batch)) &
           (.data$group %in% in_group | is.null(in_group)) &
           (.data$run_id %in% in_run | is.null(in_run))

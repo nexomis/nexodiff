@@ -20,7 +20,7 @@ prepare_complex_plot_data <- function(
   df_design_filter = NULL, plot_scale = "group",
   include_ctrl_at_group_scale = FALSE, tr_fn = NULL
 ) {
-  # Apply data transformation if provided
+
   if (!is.null(tr_fn)) {
     tr_fn_df <- function(df) {
       rn <- row.names(df)
@@ -32,59 +32,16 @@ prepare_complex_plot_data <- function(
     }
     in_data <- tr_fn_df(in_data)
   }
-  
-  # Prepare design data
-  data_design <- design$get_pairwise_design()[, c("batch", "group")] %>%
-    dplyr::distinct()
-  
-  if (!is.null(in_batch)) {
-    data_design <- dplyr::filter(data_design, .data$batch %in% in_batch)
-  }
-  if (!is.null(in_group)) {
-    data_design <- dplyr::filter(data_design, .data$group %in% in_group)
-  }
-  
-  # Apply design filter if provided
-  if (!is.null(df_design_filter)) {
-    if (plot_scale == "batch" && (!"batch" %in% names(df_design_filter))) {
-      logging::logerror(
-        "at batch scale, df_design_filters must precise batch for filters")
-      stop()
-    } else if (plot_scale == "group" &&
-               (!all(c("batch", "group") %in% names(df_design_filter)))) {
-      logging::logerror(paste(
-        "at group scale,",
-        "df_design_filters must precise batch and group for filters"))
-      stop()
-    }
-    
-    inner_join_cols <- c()
-    for (c_id in c("batch", "group")) {
-      if (c_id %in% names(df_design_filter)) {
-        inner_join_cols <- c(inner_join_cols, c_id)
-      }
-    }
-    
-    if (length(inner_join_cols) != 0) {
-      data_design <- dplyr::inner_join(
-        data_design,
-        df_design_filter,
-        by = inner_join_cols,
-        multiple = "all",
-        suffix = c("", ".filter")
-      )[, c("batch", "group")] %>%
-        dplyr::distinct()
-    }
-  } else {
-    df_design_filter <- design$get_pairwise_design()
-  }
-  
+
+  assert_that(all(c("group", "batch") %in% df_design_filter) || is.null)
+
   list(
     data = in_data,
     data_design = data_design,
     df_design_filter = df_design_filter,
     selected_ids = selected_ids
   )
+
 }
 
 #' Helper function to prepare tag selection
@@ -100,23 +57,13 @@ prepare_tag_selection <- function(
   main_etag, annotation, selected_ids, tags = NULL, tag_type = NULL
 ) {
   # Prepare tag selection
-  if (is.null(tag_type)) {
-    dict_ids <- selected_ids
-    names(dict_ids) <- dict_ids
-  } else {
-    dict_ids <- annotation$generate_translate_dict(main_etag, tag_type)
-  }
-  
   if (is.null(tags)) {
-    selected_tag_ids <- names(dict_ids)
-  } else {
-    selected_tag_ids <- names(dict_ids)[dict_ids %in% tags]
+    return(selected_ids)
   }
-
-  results <- intersect(selected_tag_ids, selected_ids)
-  assert_that(length(results) > 0)
-  results
-
+  if (! is.null(tag_type)) {
+    tags <- annotation$generate_translate_dict(main_etag, tag_type)[tags]
+  }
+  intersect(tags, selected_ids)
 }
 
 #' Helper function to create PCA plots
@@ -124,31 +71,124 @@ prepare_tag_selection <- function(
 #' @param in_data Expression data matrix
 #' @param in_title Plot title
 #' @param data_design Design data frame
+#' @param pca_plot_dims Integer vector specifying which principal components to plot
+#' @param mshape Character string specifying variable for point shapes
+#' @param mcolor Character string specifying variable for point colors
 #' @param prcomp_args Arguments for prcomp
-#' @param prcomp_autoplot_args Arguments for autoplot
 #' @param ggplot_mod Additional ggplot modifications
 #' @param color_palette Color palette name
+#' @param point_size Numeric value for point size (default: 8)
 #' @return ggplot object
 #' @keywords internal
 create_prcomp_plot <- function(
-  in_data, in_title, data_design, prcomp_args = list(),
-  prcomp_autoplot_args = list(), ggplot_mod = NULL,
-  color_palette = "BrBg"
+  in_data, in_title, data_design, pca_plot_dims = c(1, 2),
+  mshape = "batch", mcolor = "group", prcomp_args = list(),
+  ggplot_mod = NULL, color_palette = "BrBG", point_size = 8
 ) {
+  # Validate pca_plot_dims
+  assert_that(
+    is.numeric(pca_plot_dims) &
+      (length(pca_plot_dims) >= 2) &
+      all(pca_plot_dims > 0) &
+      all((pca_plot_dims - as.integer(pca_plot_dims)) == 0)
+  )
+  pca_plot_dims <- as.integer(pca_plot_dims)
+
+  # Check if mapping variables exist and are unique
+  if (!mshape %in% names(data_design) ||
+        length(unique(data_design[[mshape]])) < 2) {
+    mshape <- NULL
+  }
+  if (!mcolor %in% names(data_design) ||
+        length(unique(data_design[[mcolor]])) < 2) {
+    mcolor <- NULL
+  }
+
+  # Run PCA
   prcomp_args$x <- t(in_data)
   pca_res <- do.call(prcomp, prcomp_args)
-  prcomp_autoplot_args$object <- pca_res
-  prcomp_autoplot_args$data <- data_design
-  g <- do.call(ggplot2::autoplot, prcomp_autoplot_args) +
+  pca_data <- as.data.frame(pca_res$x)
+  colnames(pca_data) <- paste0("PC", seq_len(ncol(pca_data)))
+  pca_data$sample <- row.names(pca_data)
+
+  plot_data <- dplyr::inner_join(
+    pca_data,
+    data_design,
+    by = dplyr::join_by("sample")
+  )
+
+  assert_that(
+    length(intersect(plot_data$sample, pca_data$sample)) ==
+      length(pca_data$sample)
+  )
+
+  # Calculate variance explained
+  variance_explained <- round(100 * pca_res$sdev^2 / sum(pca_res$sdev^2), 1)
+
+  # Generate all pairwise combinations
+  dim_combinations <- t(combn(pca_plot_dims, 2))
+  colnames(dim_combinations) <- c("x_dim", "y_dim")
+
+  # Create long format data for all combinations
+  long_data <- purrr::map_dfr(
+    seq_len(nrow(dim_combinations)), 
+    function(i) {
+      x_dim <- dim_combinations[i, "x_dim"]
+      y_dim <- dim_combinations[i, "y_dim"]
+      plot_data$pair <- sprintf(
+        "X: PC%d (%.1f%%) Y: PC%d (%.1f%%)",
+        x_dim, variance_explained[x_dim],
+        y_dim, variance_explained[y_dim]
+      )
+      plot_data$x <- plot_data[[paste0("PC", x_dim)]]
+      plot_data$y <- plot_data[[paste0("PC", y_dim)]]
+      plot_data$x_lab <- sprintf("PC%d (%.1f%%)", x_dim,
+                                 variance_explained[x_dim])
+      plot_data$y_lab <- sprintf("PC%d (%.1f%%)", y_dim,
+                                 variance_explained[y_dim])
+
+      plot_data
+    }
+  )
+  # Create base plot
+  p <- ggplot2::ggplot(
+    data = long_data,
+    ggplot2::aes(x = x, y = y)
+  ) +
+    ggplot2::geom_point(
+      ggplot2::aes_string(shape = mshape, color = mcolor),
+      size = point_size
+    ) +
     ggplot2::ggtitle(in_title) +
-    ggplot2::scale_fill_brewer(palette = color_palette) +
-    ggplot2::scale_color_brewer(palette = color_palette) +
     THEME_NEXOMIS +
     ggplot2::theme(legend.position = "bottom")
-  if (!is.null(ggplot_mod)) {
-    g <- g + ggplot_mod
+
+  # Add faceting for multiple pairs, or axis labels for a single pair
+  if (nrow(dim_combinations) > 1) {
+    p <- p + ggplot2::facet_wrap(
+      ~pair, scales = "free", ncol = ceiling(sqrt(nrow(dim_combinations)))
+    ) +
+      ggplot2::xlab(NULL) +
+      ggplot2::ylab(NULL)
+  } else {
+    p <- p +
+      ggplot2::xlab(long_data$x_lab[1]) +
+      ggplot2::ylab(long_data$y_lab[1])
   }
-  return(g)
+
+  # Add shape mapping if applicable
+  if (!is.null(mshape)) {
+    p <- p + ggplot2::scale_shape_manual(values = c(15, 16, 17, 3, 4, 8, 0, 1,
+                                                    2))
+  }
+  if (!is.null(mcolor)) {
+    p <- p + ggplot2::scale_color_brewer(palette = color_palette)
+  }
+
+  if (!is.null(ggplot_mod)) {
+    p <- p + ggplot_mod
+  }
+  p
 }
 
 #' Helper function to create correlation plots
@@ -179,7 +219,7 @@ create_corr_plot <- function(
   if (!is.null(ggplot_mod)) {
     g <- g + ggplot_mod
   }
-  return(GGally::ggmatrix_gtable(g))
+  invisible(GGally::ggmatrix_gtable(g))
 }
 
 #' Helper function to create hierarchical clustering plots
@@ -336,40 +376,6 @@ arrange_complex_plots <- function(graphs) {
     plotlist = graphs,
     nrow = as.integer(sqrt(length(graphs)))
   )
-  return(p)
+  p
 }
 
-#' Helper function to check plot complex arguments
-#'
-#' @param plot_scale Scale for plotting ("design", "batch", or "group")
-#' @param inter_norm Whether inter normalization is applied
-#' @param inter_norm_fact_opts Inter normalization options
-#' @param in_batch Batch filter
-#' @return NULL (stops execution if checks fail)
-#' @keywords internal
-plot_complex_check <- function(
-  plot_scale, inter_norm, inter_norm_fact_opts, in_batch
-) {
-  if (plot_scale == "batch" && inter_norm && 
-      inter_norm_fact_opts$norm_scale == "group") {
-    logging::logerror(paste(
-      "plot_scale=batch is not compatible with group-scale inter",
-      "normalization")
-    )
-    stop()
-  }
-  
-  if (plot_scale == "design" && inter_norm && 
-      inter_norm_fact_opts$norm_scale != "design") {
-    logging::logerror(paste(
-      "plot_scale=design is not compatible with group-scale or",
-      "batch-scale in normalization")
-    )
-    stop()
-  }
-  
-  if (plot_scale == "design" && is.null(in_batch)) {
-    logging::logerror("`in_batch` cannot be null when plot_scale is design")
-    stop()
-  }
-}

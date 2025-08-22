@@ -25,6 +25,7 @@ Depends:
     R (>= 4.0)
 Imports: 
     apeglm,
+    assertthat,
     circlize,
     cowplot,
     data.table,

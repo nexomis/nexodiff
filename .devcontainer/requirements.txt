@@ -20,9 +20,11 @@ ggpubr
 ggrepel
 ggtext
 gridExtra
+igraph
 jinjar
 logging
 magrittr
+mathjaxr
 matrixStats
 methods
 openxlsx

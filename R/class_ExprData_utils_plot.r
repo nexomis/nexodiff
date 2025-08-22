@@ -8,22 +8,16 @@ NULL
 #' @param design private$design see ExprData
 #' @param geoms see ExprData$plot_dist_per_sample
 #' @param mean_fun see ExprData$plot_dist_per_sample
-#' @param log2_expr see ExprData$plot_dist_per_sample
+#' @param fn_str string representation of y-axis transform
 #' @return ggplot2 graph
 #' @keywords internal
 plot_dist_per_sample_helper <- function(
-  data, design, geoms = c("boxplot"), mean_fun = NULL, log2_expr = TRUE
+  data, design, geoms = c("boxplot"), mean_fun = NULL, fn_str
 ) {
 
-  if (length(setdiff(geoms, c("boxplot", "violin", "histo"))) > 0) {
-    logging::logerror("unrecognized value for geoms")
-    stop()
-  }
+  assert_that(all(geoms %in% c("boxplot", "violin", "histo")))
 
-  y_label <- "Expression"
-  if (log2_expr) {
-    y_label <- paste(y_label, "(log2-transformed)")
-  }
+  y_label <- paste("Expression", fn_str)
 
   batch2label <- design$get_b_labels()
   group2label <- design$get_g_labels()

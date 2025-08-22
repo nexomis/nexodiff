@@ -27,6 +27,7 @@ vignette defining file formats.
 \item \href{#method-PairwiseDesign-get_b_labels}{\code{PairwiseDesign$get_b_labels()}}
 \item \href{#method-PairwiseDesign-get_g_labels}{\code{PairwiseDesign$get_g_labels()}}
 \item \href{#method-PairwiseDesign-build_file_paths}{\code{PairwiseDesign$build_file_paths()}}
+\item \href{#method-PairwiseDesign-get_simple_design}{\code{PairwiseDesign$get_simple_design()}}
 \item \href{#method-PairwiseDesign-extract_sample_names}{\code{PairwiseDesign$extract_sample_names()}}
 \item \href{#method-PairwiseDesign-list_groups_per_batches}{\code{PairwiseDesign$list_groups_per_batches()}}
 \item \href{#method-PairwiseDesign-list_batches}{\code{PairwiseDesign$list_batches()}}
@@ -107,6 +108,26 @@ get the paths of files with raw expression data for all samples
 
 \subsection{Returns}{
 named vector with paths and sample name as keys
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-PairwiseDesign-get_simple_design"></a>}}
+\if{latex}{\out{\hypertarget{method-PairwiseDesign-get_simple_design}{}}}
+\subsection{Method \code{get_simple_design()}}{
+get the simplified design with only batch/group/ctrl
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PairwiseDesign$get_simple_design(include_ctrl = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{include_ctrl}}{whether to include controls}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+simplified design data.frame
 }
 }
 \if{html}{\out{<hr>}}

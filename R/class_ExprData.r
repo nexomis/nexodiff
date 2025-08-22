@@ -551,30 +551,25 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' * "arithmetic"
     #' @return ggplot2 graph
     plot_dist_per_sample = function(
-      intra_norm = TRUE, inter_norm = TRUE, geoms = c("boxplot"),
+      intra_norm = TRUE, inter_norm = TRUE, geoms = c("histo", "boxplot"),
       tr_fn = (function(x) log2(x + 2) - 1), mean_fun = NULL
     ) {
-      data_design_batch_group <- dplyr::distinct(
-        private$design$get_pairwise_design()[, c("batch", "group")]
-      )
-
+      sdesign <- private$design$get_simple_design()
 
       data <- purrr::map2_dfr(
-        data_design_batch_group$batch,
-        data_design_batch_group$group,
-        function(in_batch, in_group) {
-          as.tibble(self$compute_norm(in_batch, in_group, inter_norm)) %>%
-            dplyr::mutate(batch = in_batch, batch = in_batch) %>%
-            tidyr::pivot_longer(
-              ! tidyselect::all_of(c("batch", "group")),
-              names_to = "sample", values_to = "value"
-            ) %>%
-            dplyr::mutate(value = tr_fn(value))
-        }
+        sdesign$batch,
+        sdesign$group,
+        ~ tibble::as_tibble(self$compute_norm(.x, .y, inter_norm)) %>%
+          dplyr::mutate(batch = .x, group = .y) %>%
+          tidyr::pivot_longer(
+            ! tidyselect::all_of(c("batch", "group")),
+            names_to = "sample", values_to = "value"
+          ) %>%
+          dplyr::mutate(value = tr_fn(value))
       )
 
       plot_dist_per_sample_helper(
-        data, private$design, geoms, mean_fun, log2_expr
+        data, private$design, geoms, mean_fun, deparse(body(tr_fn))
       )
     },
 
@@ -596,7 +591,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' @param rescale_inter_norm Rescale inter-sample normalization factors so
     #' that their geometric mean is 1. Default is TRUE.
     extract_pairwise_data_with_design = function(
-      in_batch, in_group, rescale_inter_norm
+      in_batch, in_group, rescale_inter_norm = TRUE
     ) {
       group_per_batches <-
         private$design$list_groups_per_batches(include_ctrl = TRUE)
@@ -639,7 +634,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
       )
 
       # mandatory for rescaling to be OK
-      assert(all(names(sf) %in% results$all_samples))
+      assert_that(all(names(sf) %in% results$all_samples))
 
       results$inter_norm_fact <- sf[results$all_samples]
 
@@ -686,24 +681,27 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' group scale
     #' @param tags vector of tag ids to use for the plot
     #' @param tag_type name of the tag type to use
-    #' @param df_design_filter data frame to filter samples
+    #' @param pca_plot_dims integer id the the principal component to plot
+    #' @param mshape Which variable to use for shape mapping
+    #' @param mcolor Which variable to use for color mapping
+    #' @param point_size point size for geom plot
     #' @return ggplot2 graph
     plot_prcomp = function(
       in_batch = NULL, in_group = NULL,
       intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
-      plot_scale = "group", ggplot_mod = NULL, color_palette = "BrBg",
-      prcomp_args = list(), prcomp_autoplot_args = list(),
-      include_ctrl_at_group_scale = FALSE,
-      tags = NULL, tag_type = NULL, df_design_filter = NULL
+      plot_scale = "group", ggplot_mod = NULL, color_palette = "Paired",
+      prcomp_args = list(), include_ctrl_at_group_scale = FALSE,
+      tags = NULL, tag_type = NULL, pca_plot_dims = c(1L, 2L), mshape = "batch",
+      mcolor = "group", point_size = 5
     ) {
       private$plot_complex(
         "prcomp", in_batch, in_group, intra_norm, inter_norm, tr_fn,
         plot_scale, ggplot_mod, color_palette,
-        prcomp_args, prcomp_autoplot_args,
+        prcomp_args,
         dist_method = NULL, hclust_method = NULL, dim_reduce = NULL,
         clust_bar_var = NULL, height_main = NULL, width_main = NULL,
         include_ctrl_at_group_scale,
-        tags, tag_type, df_design_filter
+        tags, tag_type, pca_plot_dims, mshape, mcolor, point_size
       )
     },
 
@@ -716,23 +714,23 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' group scale
     #' @param tags vector of tag ids to use for the plot
     #' @param tag_type name of the tag type to use
-    #' @param df_design_filter data frame to filter samples
     #' @return ggplot2 graph
     plot_corr = function(
       in_batch = NULL, in_group = NULL,
       intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
       plot_scale = "group", ggplot_mod = NULL,
       include_ctrl_at_group_scale = FALSE,
-      tags = NULL, tag_type = NULL, df_design_filter = NULL
+      tags = NULL, tag_type = NULL
     ) {
       private$plot_complex(
         "corr", in_batch, in_group, intra_norm, inter_norm, tr_fn,
         plot_scale, ggplot_mod, color_palette = NULL,
-        prcomp_args = NULL, prcomp_autoplot_args = NULL,
+        prcomp_args = NULL,
         dist_method = NULL, hclust_method = NULL, dim_reduce = NULL,
         clust_bar_var = NULL, height_main = NULL, width_main = NULL,
         include_ctrl_at_group_scale,
-        tags, tag_type, df_design_filter
+        tags, tag_type,
+        pca_plot_dims = NULL, mshape = NULL, mcolor = NULL, point_size = NULL
       )
     },
 
@@ -753,27 +751,26 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' group scale
     #' @param tags vector of tag ids to use for the plot
     #' @param tag_type name of the tag type to use
-    #' @param df_design_filter data frame to filter samples
     #' @return ggplot2 graph
     plot_hclust = function(
       in_batch = NULL, in_group = NULL,
       intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
-      plot_scale = "group", ggplot_mod = NULL, color_palette = "BrBg",
+      plot_scale = "group", ggplot_mod = NULL, color_palette = "BrBG",
       dist_method = "euclidean", hclust_method = "ward.D2", dim_reduce = NULL,
       clust_bar_var = c(), height_main = 10, width_main = 4,
       prcomp_args = list(),
       include_ctrl_at_group_scale = FALSE,
-      tags = NULL, tag_type = NULL, df_design_filter = NULL
+      tags = NULL, tag_type = NULL
     ) {
       private$plot_complex(
         "hclust", in_batch, in_group, intra_norm, inter_norm, tr_fn,
         plot_scale, ggplot_mod, color_palette,
         prcomp_args = prcomp_args,
-        prcomp_autoplot_args = NULL,
         dist_method, hclust_method, dim_reduce,
         clust_bar_var, height_main, width_main,
         include_ctrl_at_group_scale,
-        tags, tag_type, df_design_filter
+        tags, tag_type,
+        pca_plot_dims = NULL, mshape = NULL, mcolor = NULL, point_size = NULL
       )
     }
   ),
@@ -809,17 +806,14 @@ ExprData <- R6::R6Class("ExprData", # nolint
     plot_complex = function(
       plot_type, in_batch = NULL, in_group = NULL,
       intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
-      plot_scale = "group", ggplot_mod = NULL, color_palette = "BrBg",
-      prcomp_args = list(), prcomp_autoplot_args = list(),
+      plot_scale = "group", ggplot_mod = NULL, color_palette = "Paired",
+      prcomp_args = list(),
       dist_method = "euclidean", hclust_method = "ward.D2", dim_reduce = NULL,
       clust_bar_var = c(), height_main = 10, width_main = 4,
       include_ctrl_at_group_scale = FALSE,
-      tags = NULL, tag_type = NULL, df_design_filter = NULL
+      tags = NULL, tag_type = NULL,
+      pca_plot_dims, mshape = "batch", mcolor = "group", point_size = 5
     ) {
-      # Check arguments
-      plot_complex_check(
-        plot_scale, inter_norm, private$inter_norm_fact_opts, in_batch
-      )
 
       # Prepare tag selection
       selected_tag_ids <- prepare_tag_selection(
@@ -827,156 +821,61 @@ ExprData <- R6::R6Class("ExprData", # nolint
         private$selected_ids, tags, tag_type
       )
 
-      # Prepare data based on plot scale
-      data_prep <- prepare_complex_plot_data(
-        selected_tag_ids, private$design, NULL, in_batch, in_group,
-        df_design_filter, plot_scale, include_ctrl_at_group_scale, tr_fn
+      sdesign <- design$get_simple_design(include_ctrl = TRUE)
+
+      data <- switch(plot_scale,
+        design = list(list(
+          norm = self$compute_norm(
+            intra_norm = inter_norm, inter_norm = inter_norm
+          )[selected_tag_ids, ],
+          design = design$get_pairwise_design(),
+          title = "Design"
+        )),
+        batch = purrr::map(
+          design$list_batches(),
+          ~ list(
+            norm = self$compute_norm(
+              in_batch = .x, intra_norm = inter_norm, inter_norm = inter_norm
+            )[selected_tag_ids, ],
+            design = design$get_pairwise_design(in_batch = .x),
+            title = design$get_b_labels()[.x]
+          )
+        ),
+        group = purrr::map2(
+          sdesign$batch,
+          sdesign$group,
+          ~ list(
+            norm = self$compute_norm(
+              in_batch = .x, in_group = .y,
+              include_ctrl = include_ctrl_at_group_scale,
+              intra_norm = inter_norm, inter_norm = inter_norm,
+            )[selected_tag_ids, ],
+            design = design$get_pairwise_design(in_batch = .x, in_group = .y),
+            title = paste(design$get_b_labels()[.x], design$get_g_labels()[.y])
+          )
+        )
       )
+      names(data) <- purrr::map_chr(data, ~ .x$title)
 
-      data_design <- data_prep$data_design
-      df_design_filter <- data_prep$df_design_filter
-
-      if (plot_scale == "group") {
-        graphs <- purrr::map2(
-          data_design$batch,
-          data_design$group,
-          function(x, y) {
-            in_data <- self$compute_norm(x, y, inter_norm)
-            if (include_ctrl_at_group_scale) {
-              ctrl_group <- private$design$find_control_group_per_batches()[x]
-              ctrl_data <- self$compute_norm(x, ctrl_group, inter_norm)
-              in_data <- cbind(in_data, ctrl_data)
-            }
-            selected_samples <- intersect(
-              unique(dplyr::filter(
-                df_design_filter,
-                .data$batch == .env$x & .data$group == .env$y
-              )$sample), colnames(in_data)
-            )
-            in_data <- in_data[selected_tag_ids, selected_samples]
-            in_title <- paste(
-              private$design$get_b_labels()[x],
-              private$design$get_g_labels()[y],
-              sep = ": "
-            )
-
-            # Dispatch to the appropriate plotting function based on plot_type
-            if (plot_type == "prcomp") {
-              create_prcomp_plot(
-                in_data, in_title,
-                private$design$get_pairwise_design() %>%
-                  dplyr::filter(.data$sample %in% colnames(in_data)) %>%
-                  dplyr::distinct(),
-                prcomp_args, prcomp_autoplot_args, ggplot_mod, color_palette
-              )
-            } else if (plot_type == "corr") {
-              create_corr_plot(in_data, in_title, ggplot_mod)
-            } else if (plot_type == "hclust") {
-              create_hclust_plot(
-                in_data, in_title,
-                private$design$get_pairwise_design() %>%
-                  dplyr::filter(.data$sample %in% colnames(in_data)) %>%
-                  dplyr::distinct(),
-                dist_method, hclust_method, dim_reduce, clust_bar_var,
-                height_main, width_main, color_palette, prcomp_args, ggplot_mod
-              )
-            }
-          }
+      graphs <- setNames(purrr::map(
+        data,
+        ~ switch(plot_type,
+          prcomp = create_prcomp_plot(
+            .x$norm, .x$title, .x$design, pca_plot_dims, mshape,
+            mcolor, prcomp_args, ggplot_mod, color_palette, point_size
+          ),
+          corr = create_corr_plot(.x$norm, .x$title, ggplot_mod),
+          hclust = create_hclust_plot(
+            .x$norm, .x$title, .x$design, dist_method, hclust_method,
+            dim_reduce, clust_bar_var, height_main, width_main, color_palette,
+            prcomp_args, ggplot_mod
+          )
         )
-      } else if (plot_scale == "batch") {
-        graphs <- purrr::map(
-          unique(data_design$batch),
-          function(x) {
-            if (intra_norm) {
-              data <- self$compute_norm(x, in_group, inter_norm)
-            } else {
-              data <- self$filter_and_get_raw(x, in_group)
-            }
-            selected_samples <- intersect(
-              unique(dplyr::filter(
-                df_design_filter, .data$batch == .env$x
-              )$sample)
-              , colnames(data)
-            )
-            data <- data[selected_tag_ids, selected_samples]
-            in_title <- private$design$get_b_labels()[x]
+      ), names(data))
 
-            # Adjust autoplot args for batch scale
-            prcomp_autoplot_args_mod <- prcomp_autoplot_args
-            n_args <- names(prcomp_autoplot_args_mod)
-            if (! "colour" %in% n_args) {
-              prcomp_autoplot_args_mod$colour <- "g_label"
-            }
-
-            # Dispatch to the appropriate plotting function based on plot_type
-            if (plot_type == "prcomp") {
-              create_prcomp_plot(
-                data, in_title,
-                private$design$get_pairwise_design() %>%
-                  dplyr::filter(.data$sample %in% colnames(data)) %>%
-                  dplyr::distinct(),
-                prcomp_args, prcomp_autoplot_args_mod, ggplot_mod, color_palette
-              )
-            } else if (plot_type == "corr") {
-              create_corr_plot(data, in_title, ggplot_mod)
-            } else if (plot_type == "hclust") {
-              create_hclust_plot(
-                data, in_title,
-                private$design$get_pairwise_design() %>%
-                  dplyr::filter(.data$sample %in% colnames(data)) %>%
-                  dplyr::distinct(),
-                dist_method, hclust_method, dim_reduce, clust_bar_var,
-                height_main, width_main, color_palette, prcomp_args, ggplot_mod
-              )
-            }
-          }
-        )
-      } else if (plot_scale == "design") {
-        if (intra_norm) {
-          data <- self$compute_norm(in_batch, in_group, inter_norm)
-        } else {
-          data <- self$filter_and_get_raw(in_batch, in_group)
-        }
-        selected_samples <- intersect(
-          unique(df_design_filter$sample),
-          colnames(data)
-        )
-        data <- data[selected_tag_ids, selected_samples]
-        in_title <- "Design"
-
-        # Adjust autoplot args for design scale
-        prcomp_autoplot_args_mod <- prcomp_autoplot_args
-        n_args <- names(prcomp_autoplot_args_mod)
-        if (! "colour" %in% n_args) {
-          prcomp_autoplot_args_mod$colour <- "g_label"
-        }
-        if (! "shape" %in% n_args) {
-          prcomp_autoplot_args_mod$shape <- "b_label"
-        }
-
-        # Dispatch to the appropriate plotting function based on plot_type
-        if (plot_type == "prcomp") {
-          graphs <- list(create_prcomp_plot(
-            data, in_title,
-            private$design$get_pairwise_design() %>%
-              dplyr::filter(.data$sample %in% colnames(data)) %>%
-              dplyr::distinct(),
-            prcomp_args, prcomp_autoplot_args_mod, ggplot_mod, color_palette
-          ))
-        } else if (plot_type == "corr") {
-          graphs <- list(create_corr_plot(data, in_title, ggplot_mod))
-        } else if (plot_type == "hclust") {
-          graphs <- list(create_hclust_plot(
-            data, in_title,
-            private$design$get_pairwise_design() %>%
-              dplyr::filter(.data$sample %in% colnames(data)) %>%
-              dplyr::distinct(),
-            dist_method, hclust_method, dim_reduce, clust_bar_var,
-            height_main, width_main, color_palette, prcomp_args, ggplot_mod
-          ))
-        }
+      if (plot_scale == "design") {
+        return(graphs[[1]])
       }
-
       arrange_complex_plots(graphs)
     }
   )

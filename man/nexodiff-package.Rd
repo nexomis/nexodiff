@@ -12,6 +12,7 @@ Provides classes and functions for performing differential expression analysis o
 Useful links:
 \itemize{
   \item \url{https://github.com/nexomis/nexodiff}
+  \item \url{https://nexomis.github.io/nexodiff/}
   \item Report bugs at \url{https://github.com/nexomis/nexodiff/issues}
 }
 

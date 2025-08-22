@@ -731,7 +731,7 @@ sample.
 \if{html}{\out{<div class="r">}}\preformatted{ExprData$plot_dist_per_sample(
   intra_norm = TRUE,
   inter_norm = TRUE,
-  geoms = c("boxplot"),
+  geoms = c("histo", "boxplot"),
   tr_fn = (function(x) log2(x + 2) - 1),
   mean_fun = NULL
 )}\if{html}{\out{</div>}}
@@ -782,7 +782,7 @@ Get formatted data for a group with its matching control within a batch
 \if{html}{\out{<div class="r">}}\preformatted{ExprData$extract_pairwise_data_with_design(
   in_batch,
   in_group,
-  rescale_inter_norm
+  rescale_inter_norm = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -854,13 +854,15 @@ Function to draw PCA plots
   tr_fn = (function(x) log2(x + 2)),
   plot_scale = "group",
   ggplot_mod = NULL,
-  color_palette = "BrBg",
+  color_palette = "Paired",
   prcomp_args = list(),
-  prcomp_autoplot_args = list(),
   include_ctrl_at_group_scale = FALSE,
   tags = NULL,
   tag_type = NULL,
-  df_design_filter = NULL
+  pca_plot_dims = c(1L, 2L),
+  mshape = "batch",
+  mcolor = "group",
+  point_size = 5
 )}\if{html}{\out{</div>}}
 }
 
@@ -889,8 +891,6 @@ normalization.}
 
 \item{\code{prcomp_args}}{args to be used with prcomp.}
 
-\item{\code{prcomp_autoplot_args}}{list of argument that are used with autoplot.}
-
 \item{\code{include_ctrl_at_group_scale}}{whether to include the controls at
 group scale}
 
@@ -898,7 +898,15 @@ group scale}
 
 \item{\code{tag_type}}{name of the tag type to use}
 
-\item{\code{df_design_filter}}{data frame to filter samples}
+\item{\code{pca_plot_dims}}{integer id the the principal component to plot}
+
+\item{\code{mshape}}{Which variable to use for shape mapping}
+
+\item{\code{mcolor}}{Which variable to use for color mapping}
+
+\item{\code{point_size}}{point size for geom plot}
+
+\item{\code{prcomp_autoplot_args}}{list of argument that are used with autoplot.}
 }
 \if{html}{\out{</div>}}
 }
@@ -922,8 +930,7 @@ Function to draw correlation plots
   ggplot_mod = NULL,
   include_ctrl_at_group_scale = FALSE,
   tags = NULL,
-  tag_type = NULL,
-  df_design_filter = NULL
+  tag_type = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -954,8 +961,6 @@ group scale}
 \item{\code{tags}}{vector of tag ids to use for the plot}
 
 \item{\code{tag_type}}{name of the tag type to use}
-
-\item{\code{df_design_filter}}{data frame to filter samples}
 }
 \if{html}{\out{</div>}}
 }
@@ -977,7 +982,7 @@ Function to draw hierarchical clustering plots
   tr_fn = (function(x) log2(x + 2)),
   plot_scale = "group",
   ggplot_mod = NULL,
-  color_palette = "BrBg",
+  color_palette = "BrBG",
   dist_method = "euclidean",
   hclust_method = "ward.D2",
   dim_reduce = NULL,
@@ -987,8 +992,7 @@ Function to draw hierarchical clustering plots
   prcomp_args = list(),
   include_ctrl_at_group_scale = FALSE,
   tags = NULL,
-  tag_type = NULL,
-  df_design_filter = NULL
+  tag_type = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -1035,8 +1039,6 @@ group scale}
 \item{\code{tags}}{vector of tag ids to use for the plot}
 
 \item{\code{tag_type}}{name of the tag type to use}
-
-\item{\code{df_design_filter}}{data frame to filter samples}
 }
 \if{html}{\out{</div>}}
 }
