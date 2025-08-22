@@ -38,6 +38,7 @@ beta_sd <- 1 # Standard deviation for non-intercept betas (log2 fold changes)
 size_factors1 <- runif(n_samples_per_batch, min = 0.8, max = 1.2)
 
 # Generate DESeqDataSet for batch 1
+set.seed(456)
 dds1 <- makeExampleDESeqDataSet(
   n = n_genes,
   m = n_samples_per_batch,
@@ -50,6 +51,7 @@ dds1 <- makeExampleDESeqDataSet(
 size_factors2 <- runif(n_samples_per_batch, min = 0.9, max = 1.3)
 
 # Generate DESeqDataSet for batch 2
+set.seed(789)
 dds2 <- makeExampleDESeqDataSet(
   n = n_genes,
   m = n_samples_per_batch,
