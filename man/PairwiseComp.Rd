@@ -134,7 +134,9 @@ on given criteria.
   use_padj = TRUE,
   type = "deregulated",
   lfc_abs_lim = 1,
-  min_signif = 0.05
+  min_signif = 0.05,
+  ranking = "log2FoldChange",
+  top_x = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -158,6 +160,13 @@ groups}
 \item{\code{lfc_abs_lim}}{Threshold for log fold change}
 
 \item{\code{min_signif}}{Threshold for significance}
+
+\item{\code{ranking}}{A character string specifying the value to use for
+ranking. Can be either "log2FoldChange" (default) or "z" for a z-score
+calculated from the p-value and fold change direction.}
+
+\item{\code{top_x}}{An integer. If not NULL (the default), the list is
+restricted to the top \code{top_x} genes after ranking.}
 }
 \if{html}{\out{</div>}}
 }
@@ -177,7 +186,8 @@ nested results using multiple filtering criteria.
   use_padj = TRUE,
   cross_type = c("deregulated", "upregulated", "downregulated"),
   cross_lfc_abs_lim = c(log2(1.5), 1),
-  cross_min_signif = c(0.01, 0.05)
+  cross_min_signif = c(0.01, 0.05),
+  top_x = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -199,6 +209,9 @@ Available options are: "deregulated", "upregulated", "downregulated"
 
 \item{\code{cross_min_signif}}{Vector of significance thresholds; see
 \code{min_signif} argument in \code{\link{generate_a_list}} method}
+
+\item{\code{top_x}}{An integer. If not NULL (the default), the list is
+restricted to the top \code{top_x} genes after ranking.}
 }
 \if{html}{\out{</div>}}
 }

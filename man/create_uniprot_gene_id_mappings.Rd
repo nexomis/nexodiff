@@ -8,7 +8,6 @@ switch to data.table}
 \usage{
 create_uniprot_gene_id_mappings(
   idmapping,
-  annotation,
   unique_reviewed_min_score = 1L,
   dups_reviewed_min_score = 4L,
   unique_unreviewed_min_score = 2L,

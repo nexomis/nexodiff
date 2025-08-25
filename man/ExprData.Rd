@@ -860,8 +860,8 @@ Function to draw PCA plots
   tags = NULL,
   tag_type = NULL,
   pca_plot_dims = c(1L, 2L),
-  mshape = "batch",
-  mcolor = "group",
+  mshape = setNames("b_label", "Batch"),
+  mcolor = setNames("g_label", "Group"),
   point_size = 5
 )}\if{html}{\out{</div>}}
 }

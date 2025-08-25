@@ -164,39 +164,81 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
     #' @description
     #' Generate a list of deregulated genes for a specific comparison based
     #' on given criteria.
-    #'
+    #' @param ranking A character string specifying the value to use for
+    #' ranking. Can be either "log2FoldChange" (default) or "z" for a z-score
+    #' calculated from the p-value and fold change direction.
+    #' @param top_x An integer. If not NULL (the default), the list is
+    #' restricted to the top `top_x` genes after ranking.
     #' @return A character vector
     generate_a_list = function(in_batch, in_group, id = "symbol",
       use_padj = TRUE, type = "deregulated", lfc_abs_lim = 1,
-      min_signif = 0.05) {
-        if (type == "deregulated") {
-          tlfc <- function(x) (abs(x))
-        } else if (type == "upregulated") {
-          tlfc <- function(x) (x)
-        } else if (type == "downregulated") {
-          tlfc <- function(x) (-x)
-        } else {
-          logging::logerror("unexpected type of deregulation")
-            stop()
-          }
-      lfc_abs_lim <- abs(lfc_abs_lim)
+      min_signif = 0.05, ranking = "log2FoldChange", top_x = NULL
+    ) {
+      # Initial data retrieval and filtering for analyzed genes
       filtered <- self$filter_and_get_results(
-        in_batch, in_group, add_ids = c(id))
+        in_batch, in_group,
+        add_ids = c(id)
+      ) %>%
+        dplyr::filter(.data$status == "analyzed")
 
+      # Significance filtering
       if (use_padj) {
         filtered <- filtered %>%
-          dplyr::filter(.data$status == "analyzed") %>%
           dplyr::filter(.data$padj < min_signif)
       } else {
         filtered <- filtered %>%
-          dplyr::filter(.data$status == "analyzed") %>%
           dplyr::filter(.data$pvalue < min_signif)
       }
 
-      filtered <- filtered %>%
-        dplyr::filter(tlfc(.data$log2FoldChange) > lfc_abs_lim)
+      # LFC and deregulation type filtering
+      if (type == "deregulated") {
+        filtered <- filtered %>%
+          dplyr::filter(abs(.data$log2FoldChange) > lfc_abs_lim)
+      } else if (type == "upregulated") {
+        filtered <- filtered %>%
+          dplyr::filter(.data$log2FoldChange > lfc_abs_lim)
+      } else if (type == "downregulated") {
+        filtered <- filtered %>%
+          dplyr::filter(.data$log2FoldChange < -lfc_abs_lim)
+      } else {
+        logging::logerror(
+          "Unexpected type of deregulation: must be one of 'deregulated',",
+          "'upregulated', 'downregulated'"
+        )
+        stop()
+      }
 
-      as.vector(filtered[, id])
+      # Rank and select top genes if top_x is specified
+      if (!is.null(top_x)) {
+        if (ranking == "z") {
+          filtered <- filtered %>%
+            dplyr::mutate(
+              z = sign(.data$log2FoldChange) * qnorm(1 - .data$pvalue)
+            )
+        } else if (ranking != "log2FoldChange") {
+          logging::logerror(
+            "Unexpected ranking method: must be 'log2FoldChange' or 'z'"
+          )
+          stop()
+        }
+
+        if (type == "deregulated") {
+          filtered <- filtered %>%
+            dplyr::arrange(dplyr::desc(abs(.data[[ranking]])))
+        } else if (type == "upregulated") {
+          filtered <- filtered %>%
+            dplyr::arrange(dplyr::desc(.data[[ranking]]))
+        } else { # downregulated
+          filtered <- filtered %>%
+            dplyr::arrange(.data[[ranking]])
+        }
+
+        filtered <- filtered %>%
+          dplyr::slice_head(n = as.integer(top_x))
+      }
+
+      as.vector(filtered[[id]])
+
     },
 
     #' @title Generate Crossed Lists from Nested Results
@@ -213,6 +255,8 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
     #' `lfc_abs_lim` argument in \code{\link{generate_a_list}} method
     #' @param cross_min_signif Vector of significance thresholds; see
     #' `min_signif` argument in \code{\link{generate_a_list}} method
+    #' @param top_x An integer. If not NULL (the default), the list is
+    #' restricted to the top `top_x` genes after ranking.
     #' @return A nested data.frame containing crossed lists of genes for each
     #' combination of filtering criteria
     cross_args_and_generate_lists = function(
@@ -220,7 +264,8 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       use_padj = TRUE,
       cross_type = c("deregulated", "upregulated", "downregulated"),
       cross_lfc_abs_lim = c(log2(1.5), 1),
-      cross_min_signif = c(0.01, 0.05)) {
+      cross_min_signif = c(0.01, 0.05),
+      top_x = NULL) {
       design <- private$expr_data$get_design()$get_pairwise_design() %>%
         dplyr::filter(! .data$ctrl) %>%
         dplyr::select(tidyselect::all_of(c("batch", "group"))) %>%
@@ -229,7 +274,8 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         design_id = seq_len(nrow(design)),
         type = cross_type,
         lfc_abs_lim = cross_lfc_abs_lim,
-        min_signif = cross_min_signif
+        min_signif = cross_min_signif,
+        top_x = top_x
       )
       crossed_df <- purrr::cross_df(init_l)
       crossed_df$group <- design$group[crossed_df$design_id]
@@ -547,7 +593,7 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
     plot_de = function(plot_type, lfc_limits = NULL, geoms = "point",
       show_selected_ids = TRUE, text_in_box = FALSE, max_nrow = 5,
       tag_ids_size = 4, tag_ids_alpha = 0.5, log2_expr = TRUE,
-      batch_layout = "facet_grid_x", facet_scales = "fixed", 
+      batch_layout = "facet_grid_x", facet_scales = "fixed",
       facet_space = "fixed", ...) {
 
       if (batch_layout == "color_selected" &

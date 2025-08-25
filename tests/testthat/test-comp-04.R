@@ -50,6 +50,45 @@ testthat::test_that("PairwiseDESeq2 plots are generated correctly", {
   vdiffr::expect_doppelganger("PairwiseDESeq2 Heatmap", hm$main)
 })
 
+testthat::test_that("Top gene selection and plotting works correctly", {
+  # 1. Select top 10 deregulated genes
+  top10_genes <- ds$generate_a_list(
+    in_batch = "b1",
+    in_group = "B",
+    id = "symbol",
+    type = "deregulated",
+    top_x = 10
+  )
+  testthat::expect_length(top10_genes, 10)
+  testthat::expect_type(top10_genes, "character")
+
+  # 2. Test MA plot with selected genes highlighted
+  p_ma_selected <- ds$plot_ma(
+    in_batches = "b1",
+    select_ids = top10_genes,
+    tag_id_select = "symbol"
+  )
+  vdiffr::expect_doppelganger("MA Plot with Top 10 Selected", p_ma_selected)
+
+  # 3. Test Heatmap with selected genes
+  hm_selected <- ds$plot_heatmap(
+    select_ids = top10_genes,
+    tag_id_select = "symbol",
+    in_batches = "b1"
+  )
+  vdiffr::expect_doppelganger("Heatmap of Top 10 Genes", hm_selected$main)
+
+  # 4. Test LFC per group plots for selected genes
+  p_lfc_bar <- ds$plot_lfc_per_group_facet_tags(
+    select_ids = top10_genes,
+    tag_id_select = "symbol",
+    in_batches = "b1",
+    geoms = c("bar", "errorbar")
+  )
+  vdiffr::expect_doppelganger("LFC Bar Plot for Top 10", p_lfc_bar)
+
+})
+
 testthat::test_that("DESeq2 results are consistent with simulated truth", {
   # 1. Get results from the DESeq2 analysis
   df <- ds$filter_and_get_results(
