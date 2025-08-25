@@ -33,3 +33,4 @@
 ^vignettes/*\.R
 înst/extdata/sim_inputs/*\.R
 
+^tmp/

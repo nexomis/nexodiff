@@ -683,23 +683,25 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       g <-
         ggplot2::ggplot(
           data,
-          ggplot2::aes(.data$x, .data$y,
-          group = .data$aes_group,
-          fill = .data$aes,
-          color = .data$aes,
-          shape = .data$aes,
-          alpha = .data$aes,
-          size = .data$aes
-        ))
+          ggplot2::aes(
+            .data$x, .data$y,
+            group = .data$aes_group,
+            fill = .data$aes,
+            color = .data$aes,
+            shape = .data$aes,
+            alpha = .data$aes,
+            size = .data$aes
+          )
+        )
 
       if ("bar" %in% geoms) {
         g <- g + ggplot2::geom_bar(
           stat = "identity",
-          size = 1,
+          linewidth = 1,
         )
       }
       if ("line" %in% geoms) {
-        g <- g + ggplot2::geom_line(size = 1)
+        g <- g + ggplot2::geom_line(linewidth = 1)
       }
       if ("errorbar" %in% geoms) {
         g <- g + ggplot2::geom_errorbar(
@@ -708,7 +710,7 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
             ymax = .data$ymax
           ),
           color = "darkred",
-          size = 1,
+          linewidth = 1,
           alpha = 1,
           width = 0.5
         )
@@ -717,7 +719,11 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         g <- g + ggplot2::geom_point()
       }
       if (plot_type %in% c("ma", "vulcano")) {
-        g <- g + ggplot2::geom_rug(alpha = 0.01, size = 0.2, color = "black")
+        g <- g +
+          ggplot2::geom_rug(
+            mapping = ggplot2::aes(size = NULL),
+            alpha = 0.01, linewidth = 0.2, color = "black"
+          )
       }
       if (batch_layout == "facet_nested_wrap") {
         g <- g +

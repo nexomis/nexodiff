@@ -150,18 +150,26 @@ create_prcomp_plot <- function(
       plot_data
     }
   )
+
+  long_data <- long_data %>%
+    dplyr::mutate(
+      aes_shape = if (is.null(mshape)) "15" else .data[[mshape]],
+      aes_color = if (is.null(mcolor)) "black" else .data[[mcolor]]
+    )
   # Create base plot
   p <- ggplot2::ggplot(
     data = long_data,
-    ggplot2::aes(x = x, y = y)
+    ggplot2::aes(x = .data$x, y = .data$y)
+  ) + ggplot2::geom_point(
+    mapping = ggplot2::aes(
+      color = .data$aes_color,
+      shape = .data$aes_shape
+    ),
+    size = point_size
   ) +
-    ggplot2::geom_point(
-      ggplot2::aes_string(shape = mshape, color = mcolor),
-      size = point_size
-    ) +
     ggplot2::ggtitle(in_title) +
     THEME_NEXOMIS +
-    ggplot2::theme(legend.position = "bottom")
+    ggplot2::theme(legend.position = "bottom", legend.title.position = "top")
 
   # Add faceting for multiple pairs, or axis labels for a single pair
   if (nrow(dim_combinations) > 1) {
@@ -188,7 +196,17 @@ create_prcomp_plot <- function(
   if (!is.null(ggplot_mod)) {
     p <- p + ggplot_mod
   }
-  p
+  if (is.null(names(mcolor))) {
+    names(mcolor) <- mcolor
+  }
+  if (is.null(names(mshape))) {
+    names(mshape) <- mshape
+  }
+  p + ggplot2::guides(
+    color = ifelse(is.null(mcolor), "none", "legend"),
+    shape = ifelse(is.null(mshape), "none", "legend")
+  ) +
+    ggplot2::labs(color = names(mcolor), shape = names(mshape))
 }
 
 #' Helper function to create correlation plots

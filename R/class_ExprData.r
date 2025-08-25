@@ -691,8 +691,9 @@ ExprData <- R6::R6Class("ExprData", # nolint
       intra_norm = TRUE, inter_norm = TRUE, tr_fn = (function(x) log2(x + 2)),
       plot_scale = "group", ggplot_mod = NULL, color_palette = "Paired",
       prcomp_args = list(), include_ctrl_at_group_scale = FALSE,
-      tags = NULL, tag_type = NULL, pca_plot_dims = c(1L, 2L), mshape = "batch",
-      mcolor = "group", point_size = 5
+      tags = NULL, tag_type = NULL, pca_plot_dims = c(1L, 2L),
+      mshape = setNames("b_label", "Batch"),
+      mcolor = setNames("g_label", "Group"), point_size = 5
     ) {
       private$plot_complex(
         "prcomp", in_batch, in_group, intra_norm, inter_norm, tr_fn,
@@ -821,24 +822,24 @@ ExprData <- R6::R6Class("ExprData", # nolint
         private$selected_ids, tags, tag_type
       )
 
-      sdesign <- design$get_simple_design(include_ctrl = TRUE)
+      sdesign <- private$design$get_simple_design(include_ctrl = TRUE)
 
       data <- switch(plot_scale,
         design = list(list(
           norm = self$compute_norm(
             intra_norm = inter_norm, inter_norm = inter_norm
           )[selected_tag_ids, ],
-          design = design$get_pairwise_design(),
+          design = private$design$get_pairwise_design(),
           title = "Design"
         )),
         batch = purrr::map(
-          design$list_batches(),
+          private$design$list_batches(),
           ~ list(
             norm = self$compute_norm(
               in_batch = .x, intra_norm = inter_norm, inter_norm = inter_norm
             )[selected_tag_ids, ],
-            design = design$get_pairwise_design(in_batch = .x),
-            title = design$get_b_labels()[.x]
+            design = private$design$get_pairwise_design(in_batch = .x),
+            title = private$design$get_b_labels()[.x]
           )
         ),
         group = purrr::map2(
@@ -850,8 +851,8 @@ ExprData <- R6::R6Class("ExprData", # nolint
               include_ctrl = include_ctrl_at_group_scale,
               intra_norm = inter_norm, inter_norm = inter_norm,
             )[selected_tag_ids, ],
-            design = design$get_pairwise_design(in_batch = .x, in_group = .y),
-            title = paste(design$get_b_labels()[.x], design$get_g_labels()[.y])
+            design = private$design$get_pairwise_design(in_batch = .x, in_group = .y),
+            title = paste(private$design$get_b_labels()[.x], private$design$get_g_labels()[.y])
           )
         )
       )

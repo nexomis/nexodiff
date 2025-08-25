@@ -29,6 +29,7 @@ matrixStats
 methods
 openxlsx
 parallelly
+philentropy
 pkgload
 purrr
 pvclust
