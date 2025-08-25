@@ -84,7 +84,7 @@ design <- data.frame(
   sample = all_sample_names,
   batch = c(rep("b1", n_samples_per_batch), rep("b2", n_samples_per_batch)),
   b_label = c(rep("Batch 1", n_samples_per_batch), rep("Batch 2", n_samples_per_batch)),
-  group = c(as.character(dds1$condition), as.character(dds2$condition)),
+  group = c(rep(c("A", "B"), each = n_samples_per_batch / 2), rep(c("C", "D"), each = n_samples_per_batch / 2)),
   g_label = c(rep(c("Group A", "Group B"), each = n_samples_per_batch / 2), rep(c("Group C", "Group D"), each = n_samples_per_batch / 2)),
   ctrl = c(rep(c(TRUE, FALSE), each = n_samples_per_batch / 2), rep(c(TRUE, FALSE), each = n_samples_per_batch / 2))
 )
@@ -158,3 +158,4 @@ write.table(
 )
 
 print(paste("Generated simulation files for test04 in:", file.path(getwd(), output_dir)))
+

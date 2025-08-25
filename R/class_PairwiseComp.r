@@ -99,6 +99,8 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         tidyr::unnest(cols = c("data")) %>%
         dplyr::ungroup()
 
+      annot <- private$expr_data$get_annotation()
+
       table <- as.data.frame(table)
       base_id <- private$expr_data$get_main_etag()
       table[, base_id] <- table$tag_id
@@ -107,17 +109,17 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         if (id != base_id) {
           if (safe_translate) {
             table[, id] <- safe_translate_ids(
-              private$expr_data$get_annotation()$generate_translate_dict(
+              annot$generate_translate_dict(
                 base_id, id
               ), table[, base_id]
-            )
-          } else {
+          )
+        } else {
             table[, id] <-
               private$expr_data$get_annotation()$generate_translate_dict(
                 base_id, id
               )[table[, base_id]]
-          }
         }
+      }
       }
       if (verbose) {
         verbose_translate <- c(
@@ -175,8 +177,8 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
           tlfc <- function(x) (-x)
         } else {
           logging::logerror("unexpected type of deregulation")
-          stop()
-        }
+            stop()
+          }
       lfc_abs_lim <- abs(lfc_abs_lim)
       filtered <- self$filter_and_get_results(
         in_batch, in_group, add_ids = c(id))
@@ -258,8 +260,8 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
                   lfc_abs_lim = crossed_df[[i, "lfc_abs_lim"]],
                   min_signif = crossed_df[[i, "min_signif"]],
                   use_padj = use_padj
-                )
               )
+)
               names(data) <- x
               data
            }
@@ -364,12 +366,14 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       if (max_tags > 15) {
         logging::logwarn("`max_tags` > 15 is not ideal for visibility")
       }
+      base_id <- private$expr_data$get_main_etag()
 
-      known_tag_ids <- c("tgid", "gid", "uniprot", "symbol")
-      tag_ids <- unique(c(tag_id_select, tag_id_show))
-      if (length(setdiff(tag_ids, known_tag_ids)) != 0) {
-        logging::logerror("args `tag_id*` are not recognized")
-      }
+      known_tag_ids <- private$expr_data$get_annotation()$get_from_ids()
+      annot <- private$expr_data$get_annotation()
+      assert_that(
+        tag_id_show %in% annot$get_to_ids(base_id) &
+          tag_id_select %in% annot$get_to_ids(base_id)
+      )
       keep_vars <- c("batch", "group", "baseMean", "log2FoldChange", "status",
         "lfcSE", "tag_id"
       )
@@ -414,19 +418,23 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       data[, base_id] <- data$tag_id
       data$tag_id <- NULL
 
-      for (id in tag_ids){
-        if (safe_translate){
-          data[, id] <- safe_translate_ids(
-            private$expr_data$get_annotation(
-            )$generate_translate_dict(
+      for (id in c(tag_id_select, tag_id_show)){
+        if (id %in% annot$get_to_ids(base_id)){
+          if (safe_translate) {
+            data[, id] <- safe_translate_ids(
+              annot$generate_translate_dict(
+                base_id, id
+              ), as.vector(data[, base_id])[[1]]
+            )
+          } else {
+            data[, id] <- annot$generate_translate_dict(
               base_id, id
-            ), as.vector(data[, base_id])[[1]]
-          )
+            )[as.vector(data[, base_id])[[1]]]
+          }
         } else {
-          data[, id] <- private$expr_data$get_annotation(
-          )$generate_translate_dict(
-            base_id, id
-          )[as.vector(data[, base_id])[[1]]]
+          logging::logwarn(
+            paste("Cannot find id", id, "in translate dict")
+          )
         }
       }
 

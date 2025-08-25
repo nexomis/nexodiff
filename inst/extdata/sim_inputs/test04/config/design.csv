@@ -5,9 +5,9 @@ b1_A3,b1,Batch 1,A,Group A,TRUE
 b1_B1,b1,Batch 1,B,Group B,FALSE
 b1_B2,b1,Batch 1,B,Group B,FALSE
 b1_B3,b1,Batch 1,B,Group B,FALSE
-b2_C1,b2,Batch 2,A,Group C,TRUE
-b2_C2,b2,Batch 2,A,Group C,TRUE
-b2_C3,b2,Batch 2,A,Group C,TRUE
-b2_D1,b2,Batch 2,B,Group D,FALSE
-b2_D2,b2,Batch 2,B,Group D,FALSE
-b2_D3,b2,Batch 2,B,Group D,FALSE
+b2_C1,b2,Batch 2,C,Group C,TRUE
+b2_C2,b2,Batch 2,C,Group C,TRUE
+b2_C3,b2,Batch 2,C,Group C,TRUE
+b2_D1,b2,Batch 2,D,Group D,FALSE
+b2_D2,b2,Batch 2,D,Group D,FALSE
+b2_D3,b2,Batch 2,D,Group D,FALSE

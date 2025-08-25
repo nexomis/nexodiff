@@ -387,18 +387,51 @@ Annotation <- R6::R6Class( # nolint
         names(annotations[["txid"]][[dest]]) <- annotation$txid
       }
 
-      annotation_gene <- unique(annotation[, !c("txid")])
-      dest_vector <- c("symbol", "tax_id", "tax_name")
-      for (dest in dest_vector) {
-        annotations[["gid"]][[dest]] <- annotation_gene[[dest]]
-        names(annotations[["gid"]][[dest]]) <- annotation_gene$gid
-      }
+      # Create unique gene-level annotation from the input annotation
+      annotation_gene <- unique(annotation[, .(gid, symbol, tax_id, tax_name)])
+
+      # Create gid -> symbol mapping from annotation file, prioritizing these
+      # by taking the first non-empty symbol per gid.
+      gid_symbol_from_annot <- annotation_gene[
+        !is.na(gid) & gid != "" & !is.na(symbol) & symbol != "",
+        .(symbol = symbol[1]),
+        by = gid
+      ]
+      gid_symbol_vec_annot <- gid_symbol_from_annot$symbol
+      names(gid_symbol_vec_annot) <- gid_symbol_from_annot$gid
+
+      # Create other gid -> attribute mappings from annotation file
+      gid_attributes <- annotation_gene[
+        !is.na(gid) & gid != "",
+        .(tax_id = tax_id[1], tax_name = tax_name[1]),
+        by = gid
+      ]
+      annotations[["gid"]][["tax_id"]] <- gid_attributes$tax_id
+      names(annotations[["gid"]][["tax_id"]]) <- gid_attributes$gid
+      annotations[["gid"]][["tax_name"]] <- gid_attributes$tax_name
+      names(annotations[["gid"]][["tax_name"]]) <- gid_attributes$gid
 
       logging::logdebug("Annot: Run create_id_mappings function")
-      annotation_dt <- unique(annotation[, .(gid, symbol)])
+      id_mappings <- create_uniprot_gene_id_mappings(idmapping)
 
-      id_mappings <- create_uniprot_gene_id_mappings(idmapping, annotation_dt)
+      # Get gid -> symbol mapping from UniProt as a fallback
+      gid_symbol_vec_uniprot <- id_mappings$gid2symbol
+      if (is.null(gid_symbol_vec_uniprot)) {
+        gid_symbol_vec_uniprot <- c()
+      }
 
+      # Combine symbol mappings: start with all mappings from the annotation,
+      # then add mappings from UniProt for any genes not already present.
+      # This gives priority to the annotation file.
+      final_gid_symbol_vec <- gid_symbol_vec_annot
+      uniprot_gids_to_add <- gid_symbol_vec_uniprot[
+        !names(gid_symbol_vec_uniprot) %in% names(final_gid_symbol_vec)
+      ]
+      final_gid_symbol_vec <- c(final_gid_symbol_vec, uniprot_gids_to_add)
+      annotations[["gid"]][["symbol"]] <- final_gid_symbol_vec
+
+      # TID mappings
+      # Create tid -> tx_id mapping
       annotations[["uniprot"]][["gid"]] <- id_mappings[["uniprot2gid"]]
       annotations[["uniprot"]][["protein_names"]] <-
         id_mappings[["uniprot2name"]]
@@ -418,6 +451,17 @@ Annotation <- R6::R6Class( # nolint
       names(annotations[["uniprot"]][["symbol"]]) <-
         names(annotations[["uniprot"]][["gid"]])
 
+      dest_vector <- c("uniprot", "protein_names")
+
+      for (dest in dest_vector) {
+        annotations[["txid"]][[dest]] <-
+          annotations[["gid"]][[dest]][annotations[["txid"]][["gid"]]]
+        names(annotations[["txid"]][[dest]]) <-
+          names(annotations[["txid"]][["gid"]])
+        annotations[["txid"]][[dest]] <- na.omit(
+          annotations[["txid"]][[dest]]
+        )
+      }
       df <- data.frame(
         txid = names(annotations[["txid"]][["gid"]]),
         gid = annotations[["txid"]][["gid"]],
@@ -451,7 +495,7 @@ Annotation <- R6::R6Class( # nolint
       # Add symbol mappings
       logging::logdebug("Annot: Creating symbol mappings")
       # Use the annotation_dt created earlier which has unique gid-symbol pairs
-      symbol_map_df <- data.table::copy(annotation_dt) # Contains gid, symbol
+      symbol_map_df <- data.table::copy(annotation_gene) # Contains gid, symbol
       # Add uniprot using the existing gid -> uniprot mapping
       symbol_map_df[, uniprot := annotations[["gid"]][["uniprot"]][gid]]
 
@@ -491,13 +535,13 @@ Annotation <- R6::R6Class( # nolint
         file_path <- file.path(directory_path, paste0(from_type, ".csv"))
 
         if (!file.exists(file_path)) {
-          logging::logerror(
-            "Annotation$private$initialize_from_directory:",
+            logging::logerror(
+              "Annotation$private$initialize_from_directory:",
             " File not found for type '%s': %s. Skipping.",
             from_type,
             file_path
-          )
-        }
+            )
+          }
 
         tryCatch({
           nms <- names(data.table::fread(file_path, nrows=0))
@@ -542,8 +586,8 @@ Annotation <- R6::R6Class( # nolint
         })
       }
     }
-  )
 )
+    )
 
 #' utils function for this class only
 #' scores min given for unique first and then for dups before merging
@@ -556,7 +600,6 @@ Annotation <- R6::R6Class( # nolint
 #' unreviewed entries, first for unique and then for dups
 create_uniprot_gene_id_mappings <- function(
   idmapping,
-  annotation,
   unique_reviewed_min_score = 1L,
   dups_reviewed_min_score = 4L,
   unique_unreviewed_min_score = 2L,
@@ -626,9 +669,22 @@ create_uniprot_gene_id_mappings <- function(
   gid2uniprot <- final_idmapping$uniprot
   names(gid2uniprot) <- final_idmapping$gid
 
-  return(list(
+  result <- list(
     uniprot2gid = uniprot2gid,
     gid2uniprot = gid2uniprot,
     uniprot2name = uniprot2name
-  ))
+  )
+
+  if ("symbol" %in% names(final_idmapping)) {
+    gid2symbol_uniprot_df <- final_idmapping[
+      !is.na(symbol) & symbol != "", c("gid", "symbol")
+    ]
+    gid2symbol_uniprot <- gid2symbol_uniprot_df$symbol
+    names(gid2symbol_uniprot) <- gid2symbol_uniprot_df$gid
+    result[["gid2symbol"]] <- gid2symbol_uniprot
 }
+
+  return(result)
+}
+
+

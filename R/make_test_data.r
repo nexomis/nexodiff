@@ -46,6 +46,7 @@ make_test_data <- function(set_id, tmp_dir) {
     "tax_name"
   )]
   annotation$tax_name <- stringr::str_replace(annotation$tax_name, " ", "_")
+  annotation$gene <- paste("SYM", annotation$gene, sep = "")
   readr::write_delim(
     annotation,
     quote = "none",
@@ -60,7 +61,6 @@ make_test_data <- function(set_id, tmp_dir) {
   id_mapping$gid <- paste(id_mapping$gid, ";", sep = "")
   id_mapping$annot <- "5 out of 5"
   id_mapping <- id_mapping[, c(
-
     "entry",
     "status",
     "prot_name",
