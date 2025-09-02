@@ -103,24 +103,29 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
 
       table <- as.data.frame(table)
       base_id <- private$expr_data$get_main_etag()
-      table[, base_id] <- table$tag_id
-      table$tag_id <- NULL
+      names(table)[names(table) == "tag_id"] <- base_id
       for (id in add_ids){
         if (id != base_id) {
           if (safe_translate) {
-            table[, id] <- safe_translate_ids(
-              annot$generate_translate_dict(
+            table <- dplyr::mutate(
+              table,
+              !!id := safe_translate_ids(
+                annot$generate_translate_dict(
+                  base_id, id
+                ), !!rlang::sym(base_id)
+              )
+            )
+          } else {
+            table <- dplyr::mutate(
+              table,
+              !!id := annot$generate_translate_dict(
                 base_id, id
-              ), table[, base_id]
-          )
-        } else {
-            table[, id] <-
-              private$expr_data$get_annotation()$generate_translate_dict(
-                base_id, id
-              )[table[, base_id]]
+              )[!!rlang::sym(base_id)]
+            )
+          }
         }
       }
-      }
+
       if (verbose) {
         verbose_translate <- c(
           "Expression Mean",
@@ -265,21 +270,21 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       cross_type = c("deregulated", "upregulated", "downregulated"),
       cross_lfc_abs_lim = c(log2(1.5), 1),
       cross_min_signif = c(0.01, 0.05),
-      top_x = NULL) {
-      design <- private$expr_data$get_design()$get_pairwise_design() %>%
-        dplyr::filter(! .data$ctrl) %>%
-        dplyr::select(tidyselect::all_of(c("batch", "group"))) %>%
-        dplyr::distinct()
+      top_x = NULL
+    ) {
+      sdesign <- dplyr::filter(
+        private$expr_data$get_design()$get_simple_design(),
+        !.data$ctrl
+      )
       init_l <- list(
-        design_id = seq_len(nrow(design)),
+        design_id = seq_len(nrow(sdesign)),
         type = cross_type,
         lfc_abs_lim = cross_lfc_abs_lim,
-        min_signif = cross_min_signif,
-        top_x = top_x
+        min_signif = cross_min_signif
       )
       crossed_df <- purrr::cross_df(init_l)
-      crossed_df$group <- design$group[crossed_df$design_id]
-      crossed_df$batch <- design$batch[crossed_df$design_id]
+      crossed_df$group <- sdesign$group[crossed_df$design_id]
+      crossed_df$batch <- sdesign$batch[crossed_df$design_id]
       crossed_df$design_id <- NULL
       crossed_df <- crossed_df %>%
         dplyr::relocate(
@@ -305,12 +310,13 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
                   type = crossed_df[[i, "type"]],
                   lfc_abs_lim = crossed_df[[i, "lfc_abs_lim"]],
                   min_signif = crossed_df[[i, "min_signif"]],
-                  use_padj = use_padj
+                  use_padj = use_padj,
+                  top_x = top_x
+                )
               )
-)
               names(data) <- x
               data
-           }
+            }
           )
         }
       )

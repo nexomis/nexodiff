@@ -34,3 +34,5 @@
 înst/extdata/sim_inputs/*\.R
 
 ^tmp/
+^doc$
+^Meta$

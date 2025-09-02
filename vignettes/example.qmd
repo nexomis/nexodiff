@@ -4,6 +4,10 @@ format:
   html:
     code-fold: show
     embed-resources: true
+vignette: >
+  %\VignetteIndexEntry{Nexodiff example usage}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 execute:
   cache: true
   eval: true
@@ -42,7 +46,7 @@ annot <- nexodiff::Annotation$new(
   annotation = "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.gff.gz"
 )
 # Optionally, save the processed annotation to a directory for faster loading next time
-annot$write_to_directory("directory_with_annot")
+annot$write_to_directory("example_annot_dir")
 ```
 
 ```{r}
@@ -50,7 +54,7 @@ annot$write_to_directory("directory_with_annot")
 # Example: Initializing from a pre-processed directory
 # This is faster if the annotation has been processed and saved before.
 annot <- nexodiff::Annotation$new(
-  annotation_dir = "directory_with_annot"
+  annotation_dir = "example_annot_dir"
 )
 ```
 
@@ -179,7 +183,10 @@ Use `$plot_sum_per_type_per_sample()` to plot the summary of expression tags.
 ```{r}
 #| label: expr_tx_plot
 # Plot summary based on annotation (e.g., counts per RNA type, per species)
-expr_tx$plot_sum_per_type_per_sample()
+p <- expr_tx$plot_etags_summary()
+
+p$type
+
 ```
 
 ## Filtering
@@ -215,8 +222,34 @@ Create an `ExprDataGene` object from an `ExprDataTranscript` object. It sums tra
 # Example: Creating a gene-level expression data object from the transcript-level one
 expr_gene <- nexodiff::ExprDataGene$new(expr_tx)
 # Show summary at the gene level
-expr_gene$show_etags_summary()
+p <- expr_gene$plot_etags_summary()
 ```
+
+### Distributions of types
+
+::: {.panel-tabset}
+
+#### Tax ID `$tax_id`
+
+```{r}
+#| label: plot_etags_summary_tax_id
+p$tax_id
+```
+
+#### Tax Name `$tax_name`
+
+```{r}
+#| label: plot_etags_summary_tax_name
+p$tax_name
+```
+
+#### Type of transcript `$type`
+
+```{r}
+#| label: plot_etags_summary_type
+p$type
+```
+:::
 
 ## Normalization
 
@@ -230,7 +263,7 @@ This adjusts for factors like transcript length within a single sample. Common m
 #| label: expr_intra_norm
 # Example: Apply TPM normalization (Transcript Per Million)
 # This calculates and stores the intra-normalization factors internally
-expr_gene$compute_and_set_intra_norm_fact(method = "tpm") 
+expr_gene$compute_and_set_intra_norm_fact(method = "tpm")
 # Note: Use expr_tx for transcript-level normalization if needed before gene summary
 ```
 
@@ -242,10 +275,7 @@ This adjusts for differences in library size or composition between samples, mak
 #| label: expr_inter_norm
 # Example: Apply Median Ratio normalization across groups within batches
 # This calculates and stores the inter-normalization factors internally
-expr_gene$compute_and_set_inter_norm_fact(
-  method = "median", 
-  norm_scale = "batch"
-) 
+expr_gene$compute_and_set_inter_norm_fact()
 ```
 
 Refer to `ExprData` documentation for details on normalization methods and options.
@@ -263,12 +293,9 @@ Plot the distribution of expression values (raw or normalized) for each sample.
 #### Raw
 ```{r}
 #| label: plot_dist_raw
-# Example: Boxplot of log2(TPM + 2) expression values per sample
 expr_gene$plot_dist_per_sample(
   intra_norm = FALSE, 
-  inter_norm = FALSE, 
-  log2_expr = TRUE, 
-  geoms = "boxplot"
+  inter_norm = FALSE
 )
 ```
 
@@ -276,12 +303,9 @@ expr_gene$plot_dist_per_sample(
 ```{r}
 #| label: plot_dist_norm
 # Example: Boxplot of log2(TPM + 2) expression values per sample
-# Applies intra (TPM set above) and inter (Median Ratio set above) normalization
 expr_gene$plot_dist_per_sample(
   intra_norm = TRUE, 
-  inter_norm = TRUE, 
-  log2_expr = TRUE, 
-  geoms = "boxplot"
+  inter_norm = TRUE
 )
 ```
 
@@ -293,11 +317,7 @@ PCA helps visualize the main sources of variation in the data and identify sampl
 
 ```{r}
 #| label: plot_pca
-# Example: PCA plot using log2(normalized counts + 2)
-# Colors points by 'group' from the design file
-expr_gene$plot_prcomp(
-  plot_scale = "batch",
-)
+expr_gene$plot_prcomp(plot_scale = "design")
 ```
 
 ### Correlation Heatmap
@@ -306,7 +326,6 @@ Assess sample-to-sample similarity using correlation.
 
 ```{r}
 #| label: plot_corr
-# Example: Correlation heatmap of samples based on log2(normalized counts + 2)
 expr_gene$plot_corr(
   intra_norm = TRUE, 
   inter_norm = TRUE, 
@@ -352,10 +371,10 @@ Use `$filter_and_get_results()` to extract the results table for specific compar
 # (replace with actual group/batch names from your design)
 # Add gene symbol and protein names to the table
 results_df <- pairwise_deseq2$filter_and_get_results(
-   in_batch = "batch1",
-   in_group = "test",
-   add_ids = c("symbol", "protein_names") 
- )
+    in_batch = "batch1",
+    in_group = "test",
+    add_ids = c("symbol", "protein_names") 
+  )
 knitr::kable(head(results_df))
 ```
 
@@ -367,10 +386,14 @@ Generate a summary table counting the number of differentially expressed genes b
 #| label: de_summary
 # Example: Generate a summary of deregulated genes using different thresholds
 summary_df <- pairwise_deseq2$generate_summary(
-   cross_lfc_abs_lim = c(log2(1.5), 1), # LFC thresholds log2(1.5) and 1
-   cross_min_signif = c(0.05, 0.01),    # Adjusted p-value thresholds 0.05 and 0.01
-   use_padj = TRUE                      # Use adjusted p-value
- )
+  cross_id = c("symbol", "uniprot"),
+  cross_type = c("deregulated", "upregulated","downregulated"),
+  cross_lfc_abs_lim = c(log2(1.5), 1),
+  cross_min_signif = c(0.01, 0.05),
+  use_padj = TRUE
+)
+
+
 knitr::kable(summary_df)
 
 # You can also plot this summary
@@ -379,6 +402,8 @@ pairwise_deseq2$plot_summary(
   cross_min_signif = c(0.05, 0.01),    
   use_padj = TRUE                    
 )
+
+
 ```
 
 ### Plotting Results
@@ -438,7 +463,7 @@ pairwise_deseq2$plot_heatmap(
   lfc_abs_lim = 1,
   min_signif = 0.05,
   use_padj = TRUE,
-  select_ids = pairwise_deseq2$generate_a_list(in_batch = "batch1", in_group ="test", id = "tgid")[1:50],
+  select_ids = pairwise_deseq2$generate_a_list(in_batch = "batch1", in_group ="test", id = "tgid", top_x = 100),
   tag_id_select = "tgid",
   tag_id_show = "symbol",
   max_tags = 500,

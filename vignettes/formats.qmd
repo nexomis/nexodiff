@@ -1,9 +1,8 @@
 ---
 title: "File formats"
-output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{formats}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
 
@@ -11,11 +10,9 @@ vignette: >
 
 This format is used by `nexodiff::PairwiseDesign` class.
 
-The Pairwise design records all the samples with the experimental design and 
-data filefile location. There is 2 format possible. Most of the functionalities
-are only allowed using the YML format.
+The Pairwise design records all the samples with the experimental design and data file location. There are 2 formats possible: YML and CSV. **It is highly recommended to use the YML format**, as it supports more advanced features and provides a more structured way to define the experimental design.
 
-In a normal samplesheet data file are expected to be kallisto output using h5 format. 
+In a normal samplesheet data file are expected to be kallisto output using h5 format.
 
 Batch are defined with groups of sample and only one group per batch as controle such as wihtin a batch this pacxkage allow the generation of pairwise comparison for all groups vs the control group.
 
@@ -23,9 +20,9 @@ Alternatively this format can be used to define a meta-analysis by reusing preco
 
 ### YML format
 
-The samplesheet yml file is structured as follow: 
+The samplesheet yml file is structured as follow:
 
-```{example}
+``` yml
 # type: [string]
 # required: F
 # additional variable in the same order as given below per sample
@@ -112,10 +109,9 @@ meta: F
 
 ### The csv format
 
+Example:
 
-Example: 
-
-```
+``` csv
 batch;group;sample;ctrl
 b1;A;A1;F
 b1;A;A2;F
@@ -124,67 +120,64 @@ b1;C;C1;T
 b1;C;C2;T
 b1;C;C3;T
 ```
+
 mandatory fields are :
 
-- batch : code for batch
-- group : code for group
-- sample : sample name
-- ctrl : T if the group is supposed to be control / F else
+-   batch : code for batch
+-   group : code for group
+-   sample : sample name
+-   ctrl : T if the group is supposed to be control / F else
 
 optional fields are :
 
-- g_label : group label for figures
-- b_label : batch label for figures
-- run_id : run id if sample comes from different runs
+-   g_label : group label for figures
+-   b_label : batch label for figures
+-   run_id : run id if sample comes from different runs
 
-In addition other variable can be added in the csv and will be interpreted as
-additional variables. However some variable names are forbidden :
+In addition other variable can be added in the csv and will be interpreted as additional variables. However some variable names are forbidden :
 
-- sample_base
-- replicate
+-   sample_base
+-   replicate
 
+## 2. Kallisto output format
 
-## 2. Transcriptome annotation format
+The `nexodiff` package can import expression data from [Kallisto](https://pachterlab.github.io/kallisto/) output files. The expected format is the HDF5 format (`.h5`), which is a binary format that contains the expression data for each sample.
 
-The transcriptome annotation file is a space delimited file without headers witht he following fields:
+When initializing an `ExprData` object with `format = "kallisto"`, the package will look for a file named `{sample_name}.h5` in the specified `src_dir`.
 
-- Transcript ID (tx_id) 
-  - Strings
-- Gene ID (gid)
-  - Strings or Integers
-- type
-  - Strings
-- Gene Symbol (symbol)
-  - Strings
-- Taxonomic ID (taxid)
-  - Integers
-- Species Names
-  - Strings
-o
-Below an exemple of the first 4 lines: 
+## 3. Transcriptome annotation format
 
-```{text}
+The `nexodiff` package can parse GFF files directly to create an annotation object. When a GFF file is processed, it generates an internal annotation format that is stored in a directory for faster loading in subsequent runs. This internal format is a space-delimited file without headers with the following fields:
+
+-   Transcript ID (tx_id)
+    -   Strings
+-   Gene ID (gid)
+    -   Strings or Integers
+-   type
+    -   Strings
+-   Gene Symbol (symbol)
+    -   Strings
+-   Taxonomic ID (taxid)
+    -   Integers
+-   Species Names
+    -   Strings o Below an exemple of the first 4 lines:
+
+``` tsv
 NR_046018.2 100287102 misc_RNA DDX11L1 9606 human
 NR_024540.1 653635 misc_RNA WASH7P 9606 human
 NR_106918.1 102466751 precursor_RNA MIR6859-1 9606 human
 MIR6859-1 102466751 ncRNA MIR6859-1 9606 human
 ```
 
-## id_mapping format
+## 4. id_mapping format
 
 The id mapping format is generated from the web HTTP API of UNIPROT. Belo is an example of request wich is composed of 6 columns:
 
 `https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Creviewed%2Cprotein_name%2Cgene_names%2Cxref_geneid%2Cannotation_score&format=tsv&query=(*)+AND+(model_organism%3A9606)`
 
-- Entry
-Uniprot ID
-- Status
-Status `reviewed` or `unreviewed`
-- Protein names
-Long string for protein name
-- Gene names
-space separated gene reported gene names
-- GeneID
-cross-references separated and terminated by `;` with the gene ID (Entrez NCBI db)
-- Annotation
-Annotation score (float) 5.0 is the best score
+-   Entry Uniprot ID
+-   Status Status `reviewed` or `unreviewed`
+-   Protein names Long string for protein name
+-   Gene names space separated gene reported gene names
+-   GeneID cross-references separated and terminated by `;` with the gene ID (Entrez NCBI db)
+-   Annotation Annotation score (float) 5.0 is the best score
