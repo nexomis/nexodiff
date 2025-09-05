@@ -30,6 +30,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install system dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+            jq \
+            wget \
+            libcurl4-openssl-dev \
+            libssl-dev \
+            libxml2-dev \
+            libfontconfig1-dev \
+            libharfbuzz-dev \
+            libfribidi-dev \
+            libfreetype6-dev \
+            libpng-dev \
+            libtiff5-dev \
+            libjpeg-dev
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
       - name: Setup Quarto
         uses: quarto-dev/quarto-actions/setup@v2
         with:
@@ -42,22 +61,6 @@ jobs:
           wget -O kallisto.tar.gz "https://zenodo.org/records/17061674/files/kallisto.tar.gz?download=1"
           tar -xzf kallisto.tar.gz
           ls -la kallisto/
-
-      - name: Install system dependencies
-        run: |
-          apt-get update -qq
-          apt-get install -y --no-install-recommends \
-            wget \
-            libcurl4-openssl-dev \
-            libssl-dev \
-            libxml2-dev \
-            libfontconfig1-dev \
-            libharfbuzz-dev \
-            libfribidi-dev \
-            libfreetype6-dev \
-            libpng-dev \
-            libtiff5-dev \
-            libjpeg-dev
 
       - name: Setup R dependencies
         run: |
