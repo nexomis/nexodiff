@@ -38,21 +38,12 @@ jobs:
             wget \
             libcurl4-openssl-dev \
             libssl-dev \
-            libxml2-dev \
-            libfontconfig1-dev \
-            libharfbuzz-dev \
-            libfribidi-dev \
-            libfreetype6-dev \
-            libpng-dev \
-            libtiff5-dev \
-            libjpeg-dev
+            libxml2-dev
+          wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.8.23/quarto-1.8.23-linux-amd64.deb
+          dpkg -i quarto-1.8.23-linux-amd64.deb
+          rm -rf quarto-1.8.23-linux-amd64.deb
 
       - uses: r-lib/actions/setup-pandoc@v2
-
-      - name: Setup Quarto
-        uses: quarto-dev/quarto-actions/setup@v2
-        with:
-          version: pre-release
 
       - name: Download and decompress kallisto files from Zenodo
         run: |
