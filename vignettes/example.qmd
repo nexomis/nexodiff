@@ -39,23 +39,20 @@ from that directory.
 
 ```{r}
 #| label: annot_from_https
-#| eval: false
-# Example: Initializing from a GFF URL (NCBI)
-# This downloads and processes the GFF file.
-annot <- nexodiff::Annotation$new(
-  annotation = "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.gff.gz"
-)
-# Optionally, save the processed annotation to a directory for faster loading next time
-annot$write_to_directory("example_annot_dir")
-```
-
-```{r}
-#| label: annot
-# Example: Initializing from a pre-processed directory
-# This is faster if the annotation has been processed and saved before.
-annot <- nexodiff::Annotation$new(
-  annotation_dir = "example_annot_dir"
-)
+if dir.exists("example_annot_dir"){
+  # This is faster if the annotation has been processed and saved before.
+  annot <- nexodiff::Annotation$new(
+    annotation_dir = "example_annot_dir"
+  )
+} else {
+  # Example: Initializing from a GFF URL (NCBI)
+  # This downloads and processes the GFF file.
+  annot <- nexodiff::Annotation$new(
+    annotation = "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.gff.gz"
+  )
+  # Optionally, save the processed annotation to a directory for faster loading next time
+  annot$write_to_directory("example_annot_dir")
+}
 ```
 
 ### ID Mapping
