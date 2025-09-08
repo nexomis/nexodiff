@@ -118,9 +118,6 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' @param inter_norm A boolean indicating whether to apply inter-sample
     #' normalization. Only used when type="norm".
     #' @return A list of tables per feature
-    #' @examples
-    #' show_etags_summary()
-    #' show_etags_summary(intra_norm=TRUE)
     show_etags_summary = function(
       in_batch = NULL, tr_fn = NULL, sum_fn = sum,
       intra_norm = FALSE, inter_norm = FALSE
@@ -146,14 +143,10 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' @param inter_norm A boolean indicating whether to apply inter-sample
     #' normalization. Only used when type="norm".
     #' @return A list of tables per feature
-    #' @examples
-    #' show_etags_summary()
-    #' show_etags_summary(intra_norm=TRUE)
     plot_etags_summary = function(
       in_batch = NULL, tr_fn = NULL, sum_fn = sum,
       intra_norm = FALSE, inter_norm = FALSE
     ) {
-
       results <- self$show_etags_summary(in_batch, tr_fn, sum_fn, intra_norm,
                                          inter_norm)
       plot_summarized_etags(results, private$design)

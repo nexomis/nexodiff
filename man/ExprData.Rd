@@ -24,23 +24,6 @@ Column names are the sample names, and row names are the expression tag
 names.
 }
 }
-\examples{
-
-## ------------------------------------------------
-## Method `ExprData$show_etags_summary`
-## ------------------------------------------------
-
-show_etags_summary()
-show_etags_summary(intra_norm=TRUE)
-Plot results from show_etags_summary.
-
-## ------------------------------------------------
-## Method `ExprData$plot_etags_summary`
-## ------------------------------------------------
-
-show_etags_summary()
-show_etags_summary(intra_norm=TRUE)
-}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
@@ -113,17 +96,8 @@ normalization. Only used when type="norm".}
 }
 \subsection{Returns}{
 A list of tables per feature
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{show_etags_summary()
-show_etags_summary(intra_norm=TRUE)
 Plot results from show_etags_summary.
 }
-\if{html}{\out{</div>}}
-
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ExprData-plot_etags_summary"></a>}}
@@ -163,15 +137,6 @@ normalization. Only used when type="norm".}
 \subsection{Returns}{
 A list of tables per feature
 }
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{show_etags_summary()
-show_etags_summary(intra_norm=TRUE)
-}
-\if{html}{\out{</div>}}
-
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ExprData-filter_and_set_selected_ids"></a>}}
