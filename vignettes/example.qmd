@@ -39,7 +39,7 @@ from that directory.
 
 ```{r}
 #| label: annot_from_https
-if dir.exists("example_annot_dir"){
+if (dir.exists("example_annot_dir")){
   # This is faster if the annotation has been processed and saved before.
   annot <- nexodiff::Annotation$new(
     annotation_dir = "example_annot_dir"
