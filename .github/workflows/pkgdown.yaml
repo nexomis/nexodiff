@@ -39,7 +39,7 @@ jobs:
             libcurl4-openssl-dev \
             libssl-dev \
             libxml2-dev
-          wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.8.23/quarto-1.8.23-linux-amd64.deb
+          wget -q https://github.com/quarto-dev/quarto-cli/releases/download/v1.8.23/quarto-1.8.23-linux-amd64.deb
           dpkg -i quarto-1.8.23-linux-amd64.deb
           rm -rf quarto-1.8.23-linux-amd64.deb
 
@@ -49,17 +49,24 @@ jobs:
         run: |
           mkdir -p tests/testthat/fixtures/integration/ena_datasets/ERX1492351_out
           cd tests/testthat/fixtures/integration/ena_datasets/ERX1492351_out
-          wget -O kallisto.tar.gz "https://zenodo.org/records/17061674/files/kallisto.tar.gz?download=1"
+          wget -q -O kallisto.tar.gz "https://zenodo.org/records/17061674/files/kallisto.tar.gz?download=1"
           tar -xzf kallisto.tar.gz
           ls -la kallisto/
+          cd ../../../../../..
+          rm tests/testthat/fixtures/integration/ena_datasets/ERX1492351_out/kallisto.tar.gz
 
       - name: Setup R dependencies
         run: |
           install.packages(c("pkgdown", "devtools", "quarto"))
         shell: Rscript {0}
 
+      - name: Setup R dependencies
+        run: |
+          devtools::install_local(path = ".", upgrade = "never")
+        shell: Rscript {0}    
+
       - name: Build site
-        run: pkgdown::build_site_github_pages(install = TRUE)
+        run: pkgdown::build_site_github_pages()
         shell: Rscript {0}
 
       - name: Deploy to GitHub pages 🚀
