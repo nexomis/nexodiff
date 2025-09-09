@@ -108,6 +108,43 @@ The `PairwiseDesign` class manages the experimental design metadata. It
 organizes samples into groups and batches, defining control groups for
 pairwise comparisons.
 
+### Data Download
+
+First, we'll download the required example data files from Zenodo.
+
+```{r}
+#| label: download_data
+# Create a temporary directory for downloaded data
+if (!dir.exists("example_data")) {
+  dir.create("example_data")
+}
+
+# Download the design CSV file
+if (!file.exists("example_data/ERX1492351_design.csv")) {
+  download.file(
+    "https://zenodo.org/records/17061674/files/ERX1492351_design.csv?download=1",
+    destfile = "example_data/ERX1492351_design.csv",
+    quiet = TRUE
+  )
+}
+
+# Download and extract the kallisto data
+if (!dir.exists("example_data/kallisto")) {
+  # Download kallisto tar.gz file
+  download.file(
+    "https://zenodo.org/records/17061674/files/kallisto.tar.gz?download=1",
+    destfile = "example_data/kallisto.tar.gz",
+    quiet = TRUE
+  )
+  
+  # Extract the tar.gz file
+  untar("example_data/kallisto.tar.gz", exdir = "example_data")
+  
+  # Clean up the tar.gz file
+  file.remove("example_data/kallisto.tar.gz")
+}
+```
+
 ### Initialization
 
 Initialize the `PairwiseDesign` object using a design file (CSV or YML format).
@@ -117,11 +154,10 @@ containing the expression files.
 ```{r}
 #| label: design
 # Example: Initializing from a CSV design file and specifying 
-# the source directory
-ena_datasets_path = "../tests/testthat/fixtures/integration/ena_datasets"
+# the source directory using downloaded data
 design <- nexodiff::PairwiseDesign$new(
-  paste(ena_datasets_path, "ERX1492351_design.csv", sep = "/"),
-  src_dir = paste(ena_datasets_path, "ERX1492351_out/kallisto", sep = "/")
+  "example_data/ERX1492351_design.csv",
+  src_dir = "example_data/kallisto"
 )
 ```
 
