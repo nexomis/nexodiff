@@ -542,17 +542,20 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' * "mod.geometric" modified geometric with epsilon = 1e-05
     #' (see https://arxiv.org/abs/1806.06403)
     #' * "arithmetic"
+    #' @param ... Additional arguments passed to `$compute_norm`
     #' @return ggplot2 graph
     plot_dist_per_sample = function(
-      intra_norm = TRUE, inter_norm = TRUE, geoms = c("histo", "boxplot"),
-      tr_fn = (function(x) log2(x + 2) - 1), mean_fun = NULL
+      geoms = c("histo", "boxplot"),
+      tr_fn = (function(x) log2(x + 2) - 1),
+      mean_fun = NULL,
+      ...
     ) {
       sdesign <- private$design$get_simple_design()
 
       data <- purrr::map2_dfr(
         sdesign$batch,
         sdesign$group,
-        ~ tibble::as_tibble(self$compute_norm(.x, .y, inter_norm)) %>%
+        ~ tibble::as_tibble(self$compute_norm(.x, .y, ...)) %>%
           dplyr::mutate(batch = .x, group = .y) %>%
           tidyr::pivot_longer(
             ! tidyselect::all_of(c("batch", "group")),

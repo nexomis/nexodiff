@@ -332,6 +332,16 @@ expr_gene$plot_dist_per_sample(
 )
 ```
 
+#### Norm intra
+```{r}
+#| label: plot_dist_norm_intra
+# Example: Boxplot of log2(TPM + 2) expression values per sample
+expr_gene$plot_dist_per_sample(
+  intra_norm = TRUE, 
+  inter_norm = FALSE
+)
+```
+
 #### Norm
 ```{r}
 #| label: plot_dist_norm
