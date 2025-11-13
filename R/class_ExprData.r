@@ -545,24 +545,122 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' @param ... Additional arguments passed to `$compute_norm`
     #' @return ggplot2 graph
     plot_dist_per_sample = function(
+      intra_norm, inter_norm,
+      include_ctrl = FALSE,
+      rescale_inter_norm = TRUE,
       geoms = c("histo", "boxplot"),
       tr_fn = (function(x) log2(x + 2) - 1),
-      mean_fun = NULL,
-      ...
+      mean_fun = NULL
     ) {
-      sdesign <- private$design$get_simple_design()
+      # Determine plot scale from inter-sample normalization scale
+      plot_scale <- if (inter_norm && !is.null(private$inter_norm_fact_opts)) {
+        private$inter_norm_fact_opts$norm_scale
+      } else {
+        "design"  # Default to design scale if no inter-sample normalization
+      }
+      
+      # include_ctrl only makes sense at group scale
+      if (plot_scale != "group") {
+        include_ctrl <- FALSE
+      }
 
-      data <- purrr::map2_dfr(
-        sdesign$batch,
-        sdesign$group,
-        ~ tibble::as_tibble(self$compute_norm(.x, .y, ...)) %>%
-          dplyr::mutate(batch = .x, group = .y) %>%
-          tidyr::pivot_longer(
-            ! tidyselect::all_of(c("batch", "group")),
-            names_to = "sample", values_to = "value"
-          ) %>%
+      # Get sample annotation data
+      sample_annot <- private$design$get_pairwise_design()
+      
+      if (plot_scale == "design") {
+        # Design scale: process all samples together, but include batch/group info
+        norm_data <- self$compute_norm(
+          intra_norm = intra_norm, inter_norm = inter_norm,
+          rescale_inter_norm = rescale_inter_norm
+        )
+        
+        # Create a data frame with all expression values and their annotations
+        # Handle samples that appear in multiple groups by creating separate rows
+        data <- purrr::map_dfr(
+          colnames(norm_data),
+          function(sample_name) {
+            sample_rows <- sample_annot[sample_annot$sample == sample_name, ]
+            if (nrow(sample_rows) > 0) {
+              # For each sample-group combination, create a row
+              purrr::map_dfr(1:nrow(sample_rows), function(i) {
+                tibble::tibble(
+                  sample = sample_name,
+                  value = as.numeric(norm_data[1, sample_name]),  # Use first row for now
+                  batch = sample_rows$batch[i],
+                  group = sample_rows$group[i]
+                )
+              })
+            } else {
+              tibble::tibble()
+            }
+          }
+        ) %>%
           dplyr::mutate(value = tr_fn(value))
-      )
+
+      } else if (plot_scale == "batch") {
+        # Batch scale: process samples within each batch
+        batches <- private$design$list_batches()
+        data <- purrr::map_dfr(
+          batches,
+          ~ {
+            batch_samples <- unique(sample_annot$sample[sample_annot$batch == .x])
+            if (length(batch_samples) > 0) {
+              norm_data <- self$compute_norm(
+                in_batch = .x,
+                intra_norm = intra_norm, inter_norm = inter_norm,
+                rescale_inter_norm = rescale_inter_norm
+              )
+              
+              # Create rows for each sample in the batch
+              purrr::map_dfr(batch_samples, function(sample_name) {
+                tibble::tibble(
+                  sample = sample_name,
+                  value = as.numeric(norm_data[1, sample_name]),  # Use first row for now
+                  batch = .x,
+                  group = "all"
+                )
+              })
+            } else {
+              tibble::tibble()
+            }
+          }
+        ) %>%
+          dplyr::mutate(value = tr_fn(value))
+
+      } else {
+        # Group scale: process samples within each batch-group combination
+        sdesign <- private$design$get_simple_design(include_ctrl = include_ctrl)
+        data <- purrr::map2_dfr(
+          sdesign$batch,
+          sdesign$group,
+          ~ {
+            group_samples <- sample_annot$sample[
+              sample_annot$batch == .x & sample_annot$group == .y
+            ]
+            if (length(group_samples) > 0) {
+              norm_data <- self$compute_norm(
+                .x, .y,
+                intra_norm = intra_norm, inter_norm = inter_norm,
+                include_ctrl = include_ctrl,
+                rescale_inter_norm = rescale_inter_norm
+              )
+              
+              # Create rows for each sample in the group
+              purrr::map_dfr(group_samples, function(sample_name) {
+                tibble::tibble(
+                  sample = sample_name,
+                  value = as.numeric(norm_data[1, sample_name]),  # Use first row for now
+                  batch = .x,
+                  group = .y
+                )
+              })
+            } else {
+              tibble::tibble()
+            }
+          }
+        ) %>%
+          dplyr::mutate(value = tr_fn(value))
+      }
 
       plot_dist_per_sample_helper(
         data, private$design, geoms, mean_fun, deparse(body(tr_fn))
@@ -1092,5 +1190,3 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
     }
   )
 )
-
-
