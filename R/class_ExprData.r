@@ -585,7 +585,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
               purrr::map_dfr(1:nrow(sample_rows), function(i) {
                 tibble::tibble(
                   sample = sample_name,
-                  value = as.numeric(norm_data[1, sample_name]),  # Use first row for now
+                  value = as.numeric(norm_data[, sample_name]),
                   batch = sample_rows$batch[i],
                   group = sample_rows$group[i]
                 )
@@ -615,7 +615,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
               purrr::map_dfr(batch_samples, function(sample_name) {
                 tibble::tibble(
                   sample = sample_name,
-                  value = as.numeric(norm_data[1, sample_name]),  # Use first row for now
+                  value = as.numeric(norm_data[, sample_name]),
                   batch = .x,
                   group = "all"
                 )
@@ -649,7 +649,7 @@ ExprData <- R6::R6Class("ExprData", # nolint
               purrr::map_dfr(group_samples, function(sample_name) {
                 tibble::tibble(
                   sample = sample_name,
-                  value = as.numeric(norm_data[1, sample_name]),  # Use first row for now
+                  value = as.numeric(norm_data[, sample_name]),
                   batch = .x,
                   group = .y
                 )

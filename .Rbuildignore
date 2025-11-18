@@ -26,11 +26,11 @@
 ^\.*cov-report\.html
 ^\.*\.r
 ^\.*\.R
-^vignettes/*_cache
-^vignettes/*_files
+^vignettes/.*_cache
+^vignettes/.*_files
 ^vignettes/directory_with annot
-^vignettes/*\.xlsx
-^vignettes/*\.R
+^vignettes/.*\.xlsx
+^vignettes/.*\.R
 înst/extdata/sim_inputs/*\.R
 
 ^tmp/

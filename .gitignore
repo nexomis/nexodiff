@@ -88,3 +88,6 @@ docs
 /tmp
 /doc/
 /Meta/
+
+/tmp_test/
+/test_*
