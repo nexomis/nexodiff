@@ -38,7 +38,6 @@ expr_data$compute_and_set_inter_norm_fact(ref_type = "ctrl")
 # Initialize the DESeq2 comparison object
 ds <- nexodiff::PairwiseDESeq2$new(expr_data)
 
-
 testthat::test_that("PairwiseDESeq2 plots are generated correctly", {
   p_ma <- ds$plot_ma()
   vdiffr::expect_doppelganger("PairwiseDESeq2 MA Plot", p_ma)

@@ -13,7 +13,6 @@ if (do_force) {
   do_force <- FALSE
 }
 
-
 temp_lib_path <- "tmp/test_local_lib"
 dir.create(temp_lib_path, recursive = TRUE, showWarnings = FALSE)
 .libPaths(c(temp_lib_path, .libPaths()))
@@ -24,9 +23,10 @@ devtools::install_local(
   quiet = FALSE,
   build_manual = FALSE,
   build_vignettes = FALSE,
-  upgrade = "never",
-  lib = temp_lib_path
+  upgrade = "never"
 )
+
+options(testthat.output_file = "test-out.xml")
 
 # Check if a specific test script is provided
 if (length(args) > 0) {
@@ -40,6 +40,7 @@ if (length(args) > 0) {
   message("Running all tests.")
   testthat::test_local(
     ".",
+    reporter = "junit",
     load_package = "installed"
   )
 }

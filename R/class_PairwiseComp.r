@@ -741,8 +741,7 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
             fill = .data$aes,
             color = .data$aes,
             shape = .data$aes,
-            alpha = .data$aes,
-            size = .data$aes
+            alpha = .data$aes
           )
         )
 
