@@ -918,12 +918,14 @@ ExprData <- R6::R6Class("ExprData", # nolint
 
       sdesign <- private$design$get_simple_design(include_ctrl = TRUE)
 
-      data <- switch(plot_scale,
+      # Get normalized data based on plot_scale
+      raw_data <- switch(plot_scale,
         design = list(list(
           norm = self$compute_norm(
             intra_norm = inter_norm, inter_norm = inter_norm
           )[selected_tag_ids, ],
-          design = private$design$get_pairwise_design(),
+          in_batch = NULL,
+          in_group = NULL,
           title = "Design"
         )),
         batch = purrr::map(
@@ -932,7 +934,8 @@ ExprData <- R6::R6Class("ExprData", # nolint
             norm = self$compute_norm(
               in_batch = .x, intra_norm = inter_norm, inter_norm = inter_norm
             )[selected_tag_ids, ],
-            design = private$design$get_pairwise_design(in_batch = .x),
+            in_batch = .x,
+            in_group = NULL,
             title = private$design$get_b_labels()[.x]
           )
         ),
@@ -945,11 +948,35 @@ ExprData <- R6::R6Class("ExprData", # nolint
               include_ctrl = include_ctrl_at_group_scale,
               intra_norm = inter_norm, inter_norm = inter_norm,
             )[selected_tag_ids, ],
-            design = private$design$get_pairwise_design(in_batch = .x, in_group = .y),
-            title = paste(private$design$get_b_labels()[.x], private$design$get_g_labels()[.y])
+            in_batch = .x,
+            in_group = .y,
+            title = paste(
+              private$design$get_b_labels()[.x],
+              private$design$get_g_labels()[.y]
+            )
           )
         )
       )
+
+      # Prepare data using prepare_complex_plot_data
+      data <- purrr::map(raw_data, ~ {
+        prepared <- prepare_complex_plot_data(
+          selected_ids = selected_tag_ids,
+          design = private$design,
+          in_data = .x$norm,
+          in_batch = .x$in_batch,
+          in_group = .x$in_group,
+          df_design_filter = NULL,
+          plot_scale = plot_scale,
+          include_ctrl_at_group_scale = include_ctrl_at_group_scale,
+          tr_fn = tr_fn
+        )
+        list(
+          norm = prepared$data,
+          design = prepared$data_design,
+          title = .x$title
+        )
+      })
       names(data) <- purrr::map_chr(data, ~ .x$title)
 
       graphs <- setNames(purrr::map(

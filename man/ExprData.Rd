@@ -694,8 +694,10 @@ Plot the distribution of count or normalized values per RNA type for each
 sample.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ExprData$plot_dist_per_sample(
-  intra_norm = TRUE,
-  inter_norm = TRUE,
+  intra_norm,
+  inter_norm,
+  include_ctrl = FALSE,
+  rescale_inter_norm = TRUE,
   geoms = c("histo", "boxplot"),
   tr_fn = (function(x) log2(x + 2) - 1),
   mean_fun = NULL
@@ -710,6 +712,10 @@ normalization.}
 
 \item{\code{inter_norm}}{A boolean indicating whether to apply inter-sample
 normalization.}
+
+\item{\code{include_ctrl}}{A boolean indicating whether to include the control
+group. This argument is only valid when specifying only one argument for
+'in_group' and 'in_batch'.}
 
 \item{\code{geoms}}{Character vector, types of plot to draw, can be a
 combination of:
@@ -731,6 +737,8 @@ Can be one of the following:
 (see https://arxiv.org/abs/1806.06403)
 \item "arithmetic"
 }}
+
+\item{\code{...}}{Additional arguments passed to \verb{$compute_norm}}
 }
 \if{html}{\out{</div>}}
 }

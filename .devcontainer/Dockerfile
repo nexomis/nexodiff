@@ -37,6 +37,18 @@ RUN export DEBIAN_FRONTEND=noninteractive \
   && dpkg -i quarto-1.7.30-linux-amd64.deb  \
   && rm -rf /var/lib/apt/lists/*
 
+# Install nvm, Node.js v24, and allure for all users
+RUN export DEBIAN_FRONTEND=noninteractive \
+  && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash \
+  && export NVM_DIR="$HOME/.nvm" \
+  && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" \
+  && nvm install 24 \
+  && nvm alias default 24 \
+  && npm install -g allure \
+  && echo 'export NVM_DIR="$HOME/.nvm"' >> /etc/bash.bashrc \
+  && echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /etc/bash.bashrc \
+  && echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> /etc/bash.bashrc
+
 COPY install.r requirements.txt requirements.dev.txt /root/
 
 RUN Rscript /root/install.r /root/requirements.txt \

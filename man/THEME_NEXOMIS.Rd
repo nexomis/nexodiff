@@ -5,7 +5,7 @@
 \alias{THEME_NEXOMIS}
 \title{ggplot2 theme for nexomis}
 \format{
-An object of class \code{theme} (inherits from \code{gg}) of length 136.
+An object of class \code{theme} (inherits from \code{ggplot2::theme}, \code{gg}, \code{S7_object}) of length 144.
 }
 \usage{
 THEME_NEXOMIS

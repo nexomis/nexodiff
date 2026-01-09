@@ -62,12 +62,15 @@ testthat::test_that("Top gene selection and plotting works correctly", {
   testthat::expect_type(top10_genes, "character")
 
   # 2. Test MA plot with selected genes highlighted
-  p_ma_selected <- ds$plot_ma(
+  p_ma_selected <- withr::with_seed(42, ds$plot_ma(
     in_batches = "b1",
     select_ids = top10_genes,
     tag_id_select = "symbol"
-  )
-  vdiffr::expect_doppelganger("MA Plot with Top 10 Selected", p_ma_selected)
+  ))
+
+  withr::with_seed(42, vdiffr::expect_doppelganger(
+    "MA Plot with Top 10 Selected", p_ma_selected
+  ))
 
   # 3. Test Heatmap with selected genes
   hm_selected <- ds$plot_heatmap(

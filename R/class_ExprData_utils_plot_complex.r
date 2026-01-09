@@ -33,11 +33,13 @@ prepare_complex_plot_data <- function(
     in_data <- tr_fn_df(in_data)
   }
 
-  assert_that(all(c("group", "batch") %in% df_design_filter) || is.null)
+  assert_that(all(
+    c("group", "batch") %in% df_design_filter) || is.null(df_design_filter
+  ))
 
   list(
     data = in_data,
-    data_design = data_design,
+    data_design = design$get_pairwise_design(in_batch, in_group),
     df_design_filter = df_design_filter,
     selected_ids = selected_ids
   )

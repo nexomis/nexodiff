@@ -1,4 +1,5 @@
 #' @include nexodiff-package.R
+#' @importFrom ggtext element_textbox
 
 NULL
 
