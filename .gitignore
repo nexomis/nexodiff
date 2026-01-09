@@ -33,6 +33,7 @@ test.ipynb
 test_cache
 test_files
 test/out_dir
+/tests/testthat/test-out.xml
 
 # exclude opened xlsx files
 ~$*
