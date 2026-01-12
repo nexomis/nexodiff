@@ -717,6 +717,9 @@ normalization.}
 group. This argument is only valid when specifying only one argument for
 'in_group' and 'in_batch'.}
 
+\item{\code{rescale_inter_norm}}{Rescale inter-sample normalization factors so
+that their geometric mean is 1. Default is TRUE.}
+
 \item{\code{geoms}}{Character vector, types of plot to draw, can be a
 combination of:
 \itemize{

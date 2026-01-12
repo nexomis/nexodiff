@@ -542,6 +542,8 @@ ExprData <- R6::R6Class("ExprData", # nolint
     #' * "mod.geometric" modified geometric with epsilon = 1e-05
     #' (see https://arxiv.org/abs/1806.06403)
     #' * "arithmetic"
+    #' @param rescale_inter_norm Rescale inter-sample normalization factors so
+    #' that their geometric mean is 1. Default is TRUE.
     #' @param ... Additional arguments passed to `$compute_norm`
     #' @return ggplot2 graph
     plot_dist_per_sample = function(

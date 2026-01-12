@@ -1,7 +1,7 @@
 Package: nexodiff
 Type: Package
 Title: RNA-seq Differential Expression Analysis
-Version: 1.0.0
+Version: 1.1.1
 Date: 2025-05-23
 Authors@R: c(
     person("Julien", "FOURET", 
