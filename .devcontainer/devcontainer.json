@@ -11,7 +11,7 @@
 	"remoteUser": "vscode",
 
 	"extensions": [
-		"saoudrizwan.claude-dev",
+		"kilocode.kilo-code",
 		"streetsidesoftware.code-spell-checker",
 		"Continue.continue",
 		"REditorSupport.r",

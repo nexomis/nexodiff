@@ -602,6 +602,8 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       batch_layout = "facet_grid_x", facet_scales = "fixed",
       facet_space = "fixed", ...) {
 
+      has_size = FALSE
+
       if (batch_layout == "color_selected" &
         plot_type != "lfc_per_group_facet_tags") {
         logging::error(paste(
@@ -767,7 +769,12 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         )
       }
       if ("point" %in% geoms) {
-        g <- g + ggplot2::geom_point()
+        if (plot_type %in% c("lfc_per_group_facet_tags", "lfc_per_group")) {
+          g <- g + ggplot2::geom_point()
+        } else {
+          g <- g + ggplot2::geom_point(ggplot2::aes(size = .data$aes))
+          has_size = TRUE
+        }
       }
       if (plot_type %in% c("ma", "vulcano")) {
         g <- g +
@@ -823,13 +830,17 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
               not_selected = 0.2,
               selected = 0.8
             ),
-            labels = llabels) +
-          ggplot2::scale_size_manual(
+            labels = llabels)
+        # Only add size scale when point geom is used
+        if (has_size) {
+          g <- g + ggplot2::scale_size_manual(
             values = c(
               not_selected = 2,
               selected = 2.5
             ),
-            labels = llabels)
+            labels = llabels
+          )
+        }
       } else {
         llabels <- c(
           filtered = "Unknown (filtered)",
@@ -875,16 +886,24 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
               deregulated = 0.2,
               deregulated_selected = 0.8,
               analyzed_selected = 0.8),
-            labels = llabels) +
-          ggplot2::scale_size_manual(
-            values = c(
-              filtered = 2,
-              filtered_selected = 2.5,
-              analyzed = 2,
-              deregulated = 2,
-              deregulated_selected = 2.5,
-              analyzed_selected = 2.5),
             labels = llabels)
+        if (has_size) {
+          g <- g +
+            ggplot2::scale_size_manual(
+              values = c(
+                filtered = 2,
+                filtered_selected = 2.5,
+                analyzed = 2,
+                deregulated = 2,
+                deregulated_selected = 2.5,
+                analyzed_selected = 2.5),
+              labels = llabels)
+        }
+      }
+      if (has_size) {
+        ltitle_size = ltitle
+      } else {
+        ltitle_size = NULL
       }
       g <- g +
         THEME_NEXOMIS +
@@ -894,7 +913,7 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
           fill = ltitle,
           color = ltitle,
           alpha = ltitle,
-          size = ltitle,
+          size = ltitle_size,
           shape = ltitle
         )
       if (plot_type %in% c("lfc_per_group_facet_tags", "lfc_per_group")) {

@@ -6,14 +6,20 @@
 #' @param gff_file Path to the GFF file or URL
 #' @param type_filter Vector of regex patterns to filter the type column
 #'   (3rd column)
+#' @param style GFF format style: "ncbi" (default) or "ensembl".
+#'   NCBI style looks for ID, Parent, gene, Dbxref, gbkey attributes.
+#'   Ensembl style looks for ID (with transcript: prefix), gene_id,
+#'   transcript_id, Parent (with gene: prefix), and Name attributes.
 #'
 #' @return A data frame with columns: txid, gid, type, symbol, tax_id
 #'
 #' @export
 parse_gff_to_annotation <- function(
   gff_file,
-  type_filter = c(".*RNA", ".*transcript")
+  type_filter = c(".*RNA", ".*transcript"),
+  style = c("ncbi", "ensembl")
 ) {
+  style <- match.arg(style)
 
   logging::logdebug("parse_gff_to_annotation: Reading GFF data using fread")
   gff_data <- data.table::fread(
@@ -46,7 +52,7 @@ parse_gff_to_annotation <- function(
   }
 
   parsed_data <- parse_gff_attributes(
-    gff_data$attributes, gff_data$type
+    gff_data$attributes, gff_data$type, style
   )
 
   data.table::setDT(parsed_data)

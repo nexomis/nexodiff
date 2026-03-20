@@ -43,8 +43,10 @@ Annotation <- R6::R6Class( # nolint
       annotation_dir = NULL,
       log_level = "WARN",
       suffix_pattern = "\\.\\d+$",
-      gff_type_filter = c(".*RNA", ".*transcript")
+      gff_type_filter = c(".*RNA", ".*transcript"),
+      gff_style = c("ncbi", "ensembl")
     ) {
+      gff_style <- match.arg(gff_style)
       logging::basicConfig(log_level)
       if (!is.null(annotation_dir)) {
         logging::logdebug(
@@ -60,7 +62,7 @@ Annotation <- R6::R6Class( # nolint
           # parse_gff_to_annotation function
           annotation <- data.table::rbindlist(lapply(
             annotation,
-            function(x) parse_gff_to_annotation(x, gff_type_filter)
+            function(x) parse_gff_to_annotation(x, gff_type_filter, gff_style)
           ))
         } else {
           # If the annotation file is not in GFF format, read it using

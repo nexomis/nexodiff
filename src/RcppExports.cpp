@@ -11,20 +11,21 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // parse_gff_attributes
-DataFrame parse_gff_attributes(CharacterVector attr_strings, CharacterVector types);
-RcppExport SEXP _nexodiff_parse_gff_attributes(SEXP attr_stringsSEXP, SEXP typesSEXP) {
+DataFrame parse_gff_attributes(CharacterVector attr_strings, CharacterVector types, CharacterVector style);
+RcppExport SEXP _nexodiff_parse_gff_attributes(SEXP attr_stringsSEXP, SEXP typesSEXP, SEXP styleSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< CharacterVector >::type attr_strings(attr_stringsSEXP);
     Rcpp::traits::input_parameter< CharacterVector >::type types(typesSEXP);
-    rcpp_result_gen = Rcpp::wrap(parse_gff_attributes(attr_strings, types));
+    Rcpp::traits::input_parameter< CharacterVector >::type style(styleSEXP);
+    rcpp_result_gen = Rcpp::wrap(parse_gff_attributes(attr_strings, types, style));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_nexodiff_parse_gff_attributes", (DL_FUNC) &_nexodiff_parse_gff_attributes, 2},
+    {"_nexodiff_parse_gff_attributes", (DL_FUNC) &_nexodiff_parse_gff_attributes, 3},
     {NULL, NULL, 0}
 };
 

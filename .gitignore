@@ -34,6 +34,7 @@ test_cache
 test_files
 test/out_dir
 /tests/testthat/test-out.xml
+/allure-report
 
 # exclude opened xlsx files
 ~$*
@@ -85,6 +86,7 @@ docs
 /debug.R
 /tes*.r
 /.continue
+/*gff3.gz
 
 /tmp
 /doc/
