@@ -6,10 +6,14 @@
 #' @param gff_file Path to the GFF file or URL
 #' @param type_filter Vector of regex patterns to filter the type column
 #'   (3rd column)
-#' @param style GFF format style: "ncbi" (default) or "ensembl".
+#' @param source_db GFF format source: "ncbi" (default) or "ensembl".
 #'   NCBI style looks for ID, Parent, gene, Dbxref, gbkey attributes.
 #'   Ensembl style looks for ID (with transcript: prefix), gene_id,
 #'   transcript_id, Parent (with gene: prefix), and Name attributes.
+#' @param tax_id Optional taxon ID to use. If provided, this will be used
+#'   instead of extracting from region entries in the GFF file. This is
+#'   particularly useful for Ensembl GFF files which don't have taxon info
+#'   in region entries.
 #'
 #' @return A data frame with columns: txid, gid, type, symbol, tax_id
 #'
@@ -17,9 +21,10 @@
 parse_gff_to_annotation <- function(
   gff_file,
   type_filter = c(".*RNA", ".*transcript"),
-  style = c("ncbi", "ensembl")
+  source_db = c("ncbi", "ensembl"),
+  tax_id = NULL
 ) {
-  style <- match.arg(style)
+  source_db <- match.arg(source_db)
 
   logging::logdebug("parse_gff_to_annotation: Reading GFF data using fread")
   gff_data <- data.table::fread(
@@ -33,15 +38,29 @@ parse_gff_to_annotation <- function(
     fill = 9L
   )
 
-  gff_data_region <- data.table::copy(gff_data)
-  gff_data_region <- gff_data_region[type == "region"]
-  gff_data_region[, tax_id := stringr::str_replace(stringr::str_extract(
-    gff_data_region$attributes, "taxon:(\\d+)"
-  ), "taxon:", "")]
-  gff_data_region <- gff_data_region[!is.na(tax_id)]
-  gff_data_region <- unique(gff_data_region[, .(source, tax_id)])
-  source2taxon <- gff_data_region$tax_id
-  names(source2taxon) <- gff_data_region$source
+  if (!is.null(tax_id)) {
+    # If tax_id is provided, use it for all sources
+    logging::logdebug("parse_gff_to_annotation: Using provided tax_id: %s", tax_id)
+    source2taxon <- rep(tax_id, length(unique(gff_data$source)))
+    names(source2taxon) <- unique(gff_data$source)
+  } else {
+    if (source_db == "ensembl") {
+      stop(paste(
+        "Ensembl GFF files don't have taxon info in region entries.",
+        "Please provide a tax_id."
+      ))
+    }
+    gff_data_region <- data.table::copy(gff_data)
+    gff_data_region <- gff_data_region[type == "region"]
+    # Otherwise, extract from region entries (NCBI style)
+    gff_data_region[, tax_id := stringr::str_replace(stringr::str_extract(
+      gff_data_region$attributes, "taxon:(\\d+)"
+    ), "taxon:", "")]
+    gff_data_region <- gff_data_region[!is.na(tax_id)]
+    gff_data_region <- unique(gff_data_region[, .(source, tax_id)])
+    source2taxon <- gff_data_region$tax_id
+    names(source2taxon) <- gff_data_region$source
+  }
 
   if (!is.null(type_filter) && length(type_filter) > 0) {
     unique_types <- unique(gff_data$type)
@@ -52,7 +71,7 @@ parse_gff_to_annotation <- function(
   }
 
   parsed_data <- parse_gff_attributes(
-    gff_data$attributes, gff_data$type, style
+    gff_data$attributes, gff_data$type, source_db
   )
 
   data.table::setDT(parsed_data)

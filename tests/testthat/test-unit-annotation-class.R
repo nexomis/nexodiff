@@ -5,7 +5,7 @@ test_that("Annotation object can be initialized from a local GFF file (NCBI styl
 
   annotation_obj <- NULL
   expect_no_error({
-    annotation_obj <- nexodiff::Annotation$new(annotation = gff_file_path, gff_style = "ncbi")
+    annotation_obj <- nexodiff::Annotation$new(annotation = gff_file_path, gff_source = "ncbi")
   })
 
   expect_false(
@@ -92,7 +92,7 @@ test_that("Annotation object can be initialized from a local GFF file (NCBI styl
     annotation_obj_filtered <- nexodiff::Annotation$new(
       annotation = gff_file_path,
       gff_type_filter = c(".*RNA"),
-      gff_style = "ncbi"
+      gff_source = "ncbi"
     )
   })
   expect_false(
@@ -108,11 +108,12 @@ test_that("Annotation object can be initialized from a local GFF file (NCBI styl
 })
 
 test_that("Annotation object can be initialized from a local GFF file (Ensembl style)", {
-  gff_file_path <- "fixtures/unit/ensembl_dummy.gff"
+  # Use named vector where name is taxon ID and value is file path
+  gff_file_path <- c("12345" = "fixtures/unit/ensembl_dummy.gff")
 
   annotation_obj <- NULL
   expect_no_error({
-    annotation_obj <- nexodiff::Annotation$new(annotation = gff_file_path, gff_style = "ensembl")
+    annotation_obj <- nexodiff::Annotation$new(annotation = gff_file_path, gff_source = "ensembl")
   })
 
   expect_false(
@@ -199,7 +200,7 @@ test_that("Annotation object can be initialized from a local GFF file (Ensembl s
     annotation_obj_filtered <- nexodiff::Annotation$new(
       annotation = gff_file_path,
       gff_type_filter = c(".*transcript"),
-      gff_style = "ensembl"
+      gff_source = "ensembl"
     )
   })
   expect_false(

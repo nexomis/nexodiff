@@ -10,11 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Ensembl GFF3 Support**: Added support for parsing Ensembl-style GFF3 files alongside existing NCBI format.
-  - New `gff_style` parameter in [`Annotation`](R/class_Annotation.r:1) class and [`parse_gff_to_annotation()`](R/parse_gff_to_annotation.r:1) function
-  - Supports both `"ncbi"` (default) and `"ensembl"` formats
-  - Ensembl parsing handles `transcript:` and `gene:` prefixes in ID/Parent attributes
-  - Extracts `transcript_id`, `gene_id`, and `Name` attributes for Ensembl format
-  - C++ implementation updated in [`src/parse_gff_attributes.cpp`](src/parse_gff_attributes.cpp:1) with new `style` parameter
+   - New `gff_source` parameter in [`Annotation`](R/class_Annotation.r:1) class and [`parse_gff_to_annotation()`](R/parse_gff_to_annotation.r:1) function
+   - Supports both `"ncbi"` (default) and `"ensembl"` formats
+   - Ensembl parsing handles `transcript:` and `gene:` prefixes in ID/Parent attributes
+   - Extracts `transcript_id`, `gene_id`, and `Name` attributes for Ensembl format
+   - C++ implementation updated in [`src/parse_gff_attributes.cpp`](src/parse_gff_attributes.cpp:1) with new `source_db` parameter
+   - Ensembl GFF files require explicit `tax_id` (via named vector in annotation parameter) since they lack taxon info in region entries
+
+- **UniProt ID Mapping Enhancement**: [`fetch_id_mapping()`](R/fetch_id_mapping.r:1) now supports `source_db` parameter to fetch mappings from either NCBI GeneID (`"ncbi"`) or Ensembl (`"ensembl"`) via UniProt API
 
 - **Testing Documentation**: Added comprehensive [TESTING.md](TESTING.md) guide covering:
   - Test structure and organization
@@ -38,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Gitignore**: Added `/allure-report` and `/*gff3.gz` patterns
 
+- **Integration Test Reorganization**: Updated integration test suite to include Ensembl GFF3 support and improved snapshot testing
 
 ### Removed
 

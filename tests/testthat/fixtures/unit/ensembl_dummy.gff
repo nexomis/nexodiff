@@ -1,19 +1,19 @@
 ##gff-version 3
-chr1	test	region	1	100	.	+	.	ID=chr1;taxon:12345
+chr1	test	chromosome	1	100	.	+	.	ID=chromosome:1
 chr1	test	gene	1	100	.	+	.	ID=gene:ENSG000001;Name=test_gene1;gene_id=ENSG000001;biotype=protein_coding
 chr1	test	transcript	1	100	.	+	.	ID=transcript:ENST000001_1;Parent=gene:ENSG000001;Name=test_gene1-201;gene_id=ENSG000001;transcript_id=ENST000001_1;biotype=protein_coding
 chr1	test	transcript	1	100	.	+	.	ID=transcript:ENST000001_2;Parent=gene:ENSG000001;Name=test_gene1-202;gene_id=ENSG000001;transcript_id=ENST000001_2;biotype=protein_coding
 chr1	test	transcript	1	100	.	+	.	ID=transcript:ENST000001_3;Parent=gene:ENSG000001;Name=test_gene1-203;gene_id=ENSG000001;transcript_id=ENST000001_3;biotype=protein_coding
 chr1	test	transcript	1	100	.	+	.	ID=transcript:ENST000001_4;Parent=gene:ENSG000001;Name=test_gene1-204;gene_id=ENSG000001;transcript_id=ENST000001_4;biotype=protein_coding
 chr1	test	transcript	1	100	.	+	.	ID=transcript:ENST000001_5;Parent=gene:ENSG000001;Name=test_gene1-205;gene_id=ENSG000001;transcript_id=ENST000001_5;biotype=protein_coding
-chr2	test	region	1	500	.	+	.	ID=chr2;taxon:12345
+chr2	test	chromosome	1	500	.	+	.	ID=chromosome:2
 chr2	test	gene	201	300	.	+	.	ID=gene:ENSG000002;Name=test_gene2;gene_id=ENSG000002;biotype=protein_coding
 chr2	test	transcript	201	300	.	+	.	ID=transcript:ENST000002_1;Parent=gene:ENSG000002;Name=test_gene2-201;gene_id=ENSG000002;transcript_id=ENST000002_1;biotype=protein_coding
 chr2	test	transcript	201	300	.	+	.	ID=transcript:ENST000002_2;Parent=gene:ENSG000002;Name=test_gene2-202;gene_id=ENSG000002;transcript_id=ENST000002_2;biotype=protein_coding
 chr2	test	transcript	201	300	.	+	.	ID=transcript:ENST000002_3;Parent=gene:ENSG000002;Name=test_gene2-203;gene_id=ENSG000002;transcript_id=ENST000002_3;biotype=protein_coding
 chr2	test	transcript	201	300	.	+	.	ID=transcript:ENST000002_4;Parent=gene:ENSG000002;Name=test_gene2-204;gene_id=ENSG000002;transcript_id=ENST000002_4;biotype=protein_coding
 chr2	test	transcript	201	300	.	+	.	ID=transcript:ENST000002_5;Parent=gene:ENSG000002;Name=test_gene2-205;gene_id=ENSG000002;transcript_id=ENST000002_5;biotype=protein_coding
-chr3	test	region	1	1000	.	+	.	ID=chr3;taxon:12345
+chr3	test	chromosome	1	1000	.	+	.	ID=chromosome:3
 chr3	test	gene	301	400	.	+	.	ID=gene:ENSG000003;Name=test_gene3;gene_id=ENSG000003;biotype=protein_coding
 chr3	test	transcript	301	400	.	+	.	ID=transcript:ENST000003_1;Parent=gene:ENSG000003;Name=test_gene3-301;gene_id=ENSG000003;transcript_id=ENST000003_1;biotype=protein_coding
 chr3	test	transcript	301	400	.	+	.	ID=transcript:ENST000003_2;Parent=gene:ENSG000003;Name=test_gene3-302;gene_id=ENSG000003;transcript_id=ENST000003_2;biotype=protein_coding

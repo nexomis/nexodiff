@@ -69,19 +69,17 @@ Creates an HTML coverage report in the current directory.
 
 ### Installing Allure
 
-Allure requires npm. Choose one installation method:
-
 ```bash
-# Option 1: Global npm install
+# Download and install nvm:
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+
+# in lieu of restarting the shell
+\. "$HOME/.nvm/nvm.sh"
+
+# Download and install Node.js:
+nvm install 24
+
 npm install -g allure
-
-# Option 2: Using npx (no global install)
-npx allure
-
-# Option 3: On Ubuntu/Debian
-sudo apt-add-repository ppa:qameta/allure
-sudo apt-get update
-sudo apt-get install allure
 ```
 
 ### Generating Reports

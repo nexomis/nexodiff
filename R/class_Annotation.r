@@ -35,6 +35,10 @@ Annotation <- R6::R6Class( # nolint
     #' @param log_level Logging level, e.g., "INFO", "WARN", "DEBUG".
     #' @param suffix_pattern The regex pattern used see clean_txid_versions
     #'   method.
+    #' @param gff_source GFF format source: "ncbi" (default) or "ensembl".
+    #'   NCBI style looks for ID, Parent, gene, Dbxref, gbkey attributes.
+    #'   Ensembl style looks for ID (with transcript: prefix), gene_id, 
+    #'   transcript_id, Parent (with gene: prefix), and Name attributes.
     #' @return A new `Annotation` object.
     initialize = function(
       annotation = NULL,
@@ -44,9 +48,9 @@ Annotation <- R6::R6Class( # nolint
       log_level = "WARN",
       suffix_pattern = "\\.\\d+$",
       gff_type_filter = c(".*RNA", ".*transcript"),
-      gff_style = c("ncbi", "ensembl")
+      gff_source = c("ncbi", "ensembl")
     ) {
-      gff_style <- match.arg(gff_style)
+      gff_source <- match.arg(gff_source)
       logging::basicConfig(log_level)
       if (!is.null(annotation_dir)) {
         logging::logdebug(
@@ -60,9 +64,23 @@ Annotation <- R6::R6Class( # nolint
           logging::logdebug("Annotation$initialize: Parsing GFF annotation")
           # If the annotation file is in GFF format, parse it using the
           # parse_gff_to_annotation function
+          # Handle named vectors where names are taxon IDs
+          annotation_files <- annotation
+          annotation_names <- names(annotation)
+          
           annotation <- data.table::rbindlist(lapply(
-            annotation,
-            function(x) parse_gff_to_annotation(x, gff_type_filter, gff_style)
+            seq_along(annotation_files),
+            function(i) {             
+              # Use name as tax_id if provided (for Ensembl), otherwise NULL (for NCBI)
+              if (is.null(annotation_names)) {
+                tax_id <- NULL
+                x <- unname(annotation_files[i])
+              } else {
+                tax_id <- annotation_names[i]
+                x <- unname(annotation_files[tax_id])
+              }
+              parse_gff_to_annotation(x, gff_type_filter, gff_source, tax_id)
+            }
           ))
         } else {
           # If the annotation file is not in GFF format, read it using
@@ -81,7 +99,7 @@ Annotation <- R6::R6Class( # nolint
         logging::logdebug(
           "Annotation$initialize: Calling private$initialize_annotation"
         )
-        private$initialize_annotation(annotation, idmapping)
+        private$initialize_annotation(annotation, idmapping, gff_source)
       } else {
         logging::logerror(paste(
           "Annotation$initialize: Either 'annotation' files or",
@@ -359,7 +377,7 @@ Annotation <- R6::R6Class( # nolint
     annotations = NULL,
 
     # initialize annotation
-    initialize_annotation = function(annotation, idmapping) {
+    initialize_annotation = function(annotation, idmapping, gff_source = "ncbi") {
       # Parse annotation
       annotations <- list(
         "gid" = list(),
@@ -369,10 +387,23 @@ Annotation <- R6::R6Class( # nolint
         "symbol" = list()
       )
 
+      dest_vector <- c("type", "tax_id", "tax_name", "gid", "symbol")
+
+      for (dest in dest_vector) {
+        annotations[["txid"]][[dest]] <- annotation[[dest]]
+        names(annotations[["txid"]][[dest]]) <- annotation$txid
+      }
+
+      ensembl_map_txid2gid <- NULL
+
+      if (gff_source == "ensembl") {
+        ensembl_map_txid2gid <- annotations[["txid"]][["gid"]]
+      }
+
       if (is.null(idmapping)) {
         idmapping <- data.table::rbindlist(lapply(
           unique(annotation$tax_id),
-          fetch_id_mapping
+          function(tax_id) fetch_id_mapping(tax_id, source_db = gff_source, txid2gid = ensembl_map_txid2gid)
         ))
       } else if (is.character(idmapping)) {
         assert_that(length(idmapping) == 1)
@@ -380,13 +411,6 @@ Annotation <- R6::R6Class( # nolint
         idmapping <- readr::read_delim(
           idmapping, delim = "\t", show_col_types = FALSE
         )
-      }
-
-      dest_vector <- c("type", "tax_id", "tax_name", "gid", "symbol")
-
-      for (dest in dest_vector) {
-        annotations[["txid"]][[dest]] <- annotation[[dest]]
-        names(annotations[["txid"]][[dest]]) <- annotation$txid
       }
 
       # Create unique gene-level annotation from the input annotation
@@ -588,8 +612,8 @@ Annotation <- R6::R6Class( # nolint
         })
       }
     }
+  )
 )
-    )
 
 #' utils function for this class only
 #' scores min given for unique first and then for dups before merging
@@ -608,18 +632,48 @@ create_uniprot_gene_id_mappings <- function(
   dups_unreviewed_min_score = 5L
   ) {
 
-  if (ncol(idmapping) == 6) {
-    cnames <- c("uniprot", "status", "names", "symbol", "gid", "score")
-  }else if (ncol(idmapping) == 5) {
-    cnames <- c("uniprot", "status", "names", "gid", "score")
-  }else {
-    # If the idmapping data.table has a different number of columns, stop the execution
-    stop("Uniprot mapping file not recognized")
+  # Handle empty idmapping data (e.g., when tax_id doesn't exist in UniProt)
+  if (is.null(idmapping) || nrow(idmapping) == 0) {
+    logging::logwarn("create_uniprot_gene_id_mappings: Empty idmapping data provided. Returning empty mappings.")
+    return(list(
+      uniprot2gid = character(0),
+      gid2uniprot = character(0),
+      uniprot2name = character(0),
+      gid2symbol = character(0)
+    ))
   }
+
   if (! data.table::is.data.table(idmapping)) {
     idmapping <- data.table::as.data.table(idmapping)
   }
-  data.table::setnames(idmapping, cnames)
+  
+  # Check if columns are already correctly named (new format from fetch_id_mapping)
+  expected_cols <- c("uniprot", "status", "names", "gid", "score")
+  optional_cols <- c("gene_names", "symbol")
+  
+  if (all(expected_cols %in% names(idmapping))) {
+    # New format - columns already named correctly
+    # gene_names is optional additional info
+  } else if (ncol(idmapping) == 6) {
+    # Old 6-column format: uniprot, status, names, symbol, gid, score
+    cnames <- c("uniprot", "status", "names", "symbol", "gid", "score")
+    data.table::setnames(idmapping, cnames)
+  } else if (ncol(idmapping) == 5) {
+    # Old 5-column format: uniprot, status, names, gid, score
+    cnames <- c("uniprot", "status", "names", "gid", "score")
+    data.table::setnames(idmapping, cnames)
+  } else {
+    # If the idmapping data.table has a different number of columns, stop the execution
+    stop("Uniprot mapping file not recognized. Expected columns: ", 
+         paste(expected_cols, collapse = ", "))
+  }
+  
+  # Ensure gid column is character before stringr operations
+  if (!is.character(idmapping$gid)) {
+    logging::logwarn("create_uniprot_gene_id_mappings: gid column is not character, converting. Current class: %s", class(idmapping$gid))
+    idmapping[, gid := as.character(gid)]
+  }
+  
   status_levels <- c("unreviewed", "reviewed")
   idmapping[, status := factor(status, levels = status_levels)]
 
@@ -678,15 +732,26 @@ create_uniprot_gene_id_mappings <- function(
   )
 
   if ("symbol" %in% names(final_idmapping)) {
-    gid2symbol_uniprot_df <- final_idmapping[
-      !is.na(symbol) & symbol != "", c("gid", "symbol")
-    ]
-    gid2symbol_uniprot <- gid2symbol_uniprot_df$symbol
-    names(gid2symbol_uniprot) <- gid2symbol_uniprot_df$gid
+    # Use existing symbol column directly
+    valid_symbols <- final_idmapping[!is.na(symbol) & symbol != ""]
+    gid2symbol_uniprot <- stats::setNames(
+      valid_symbols$symbol,
+      valid_symbols$gid
+    )
     result[["gid2symbol"]] <- gid2symbol_uniprot
-}
+  } else if ("gene_names" %in% names(final_idmapping)) {
+    # Extract first gene name from space-separated list as symbol
+    valid_genes <- final_idmapping[!is.na(gene_names) & gene_names != ""]
+    # Split gene_names and take the first element for each row
+    first_symbols <- vapply(
+      strsplit(valid_genes$gene_names, " "),
+      function(x) x[1],
+      character(1)
+    )
+    gid2symbol_uniprot <- stats::setNames(first_symbols, valid_genes$gid)
+    result[["gid2symbol"]] <- gid2symbol_uniprot
+  }
 
   return(result)
 }
-
 
