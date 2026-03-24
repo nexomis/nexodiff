@@ -97,6 +97,8 @@ Collate:
     'class_ExprData_utils_filter.r'
     'class_PairwiseDesign.r'
     'class_ExprData.r'
+    'class_ExprDataGene.r'
+    'class_ExprDataTranscript.r'
     'class_PairwiseComp.r'
     'class_PairwiseDESeq2.r'
     'class_PairwiseDearseq.r'
