@@ -26,6 +26,7 @@ vignette defining file formats.
 \item \href{#method-PairwiseDesign-new}{\code{PairwiseDesign$new()}}
 \item \href{#method-PairwiseDesign-get_b_labels}{\code{PairwiseDesign$get_b_labels()}}
 \item \href{#method-PairwiseDesign-get_g_labels}{\code{PairwiseDesign$get_g_labels()}}
+\item \href{#method-PairwiseDesign-get_quant_source}{\code{PairwiseDesign$get_quant_source()}}
 \item \href{#method-PairwiseDesign-build_file_paths}{\code{PairwiseDesign$build_file_paths()}}
 \item \href{#method-PairwiseDesign-get_simple_design}{\code{PairwiseDesign$get_simple_design()}}
 \item \href{#method-PairwiseDesign-extract_sample_names}{\code{PairwiseDesign$extract_sample_names()}}
@@ -51,7 +52,11 @@ This method initializes a new \code{PairwiseDesign} object.
 The object represents metadata for expression data, including pairwise
 design of experiments and transcriptome annotation.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{PairwiseDesign$new(pairwise_design_file, src_dir = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{PairwiseDesign$new(
+  pairwise_design_file,
+  src_dir = NULL,
+  quant_source = "kallisto"
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -64,6 +69,9 @@ be in .yml or .csv format.}
 for each run to the folder with expression files. In case of several runs
 defined in the design file, a named vector is required. Can be specified
 for YML also but only 1 value for all runs.}
+
+\item{\code{quant_source}}{The source of quantification files. Either "kallisto"
+(default) or "salmon". This determines the file patterns to look for.}
 }
 \if{html}{\out{</div>}}
 }
@@ -95,6 +103,19 @@ get group labels
 
 \subsection{Returns}{
 named vector with group label (group code as names)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-PairwiseDesign-get_quant_source"></a>}}
+\if{latex}{\out{\hypertarget{method-PairwiseDesign-get_quant_source}{}}}
+\subsection{Method \code{get_quant_source()}}{
+get quantification source
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PairwiseDesign$get_quant_source()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+character string, either "kallisto" or "salmon"
 }
 }
 \if{html}{\out{<hr>}}

@@ -60,7 +60,6 @@ Initialize \code{ExprDataTranscript} object
   annotation,
   with_fixed_length = FALSE,
   log_level = "WARN",
-  format = "kallisto",
   suffix_pattern = "\\\\.\\\\d+$"
 )}\if{html}{\out{</div>}}
 }
@@ -76,8 +75,6 @@ Initialize \code{ExprDataTranscript} object
 of a fixed length like 3 prime or not}
 
 \item{\code{log_level}}{Level of logging (see logging package). Default = WARN}
-
-\item{\code{format}}{Format of files. Default=kallisto}
 
 \item{\code{suffix_pattern}}{See clean_txid_versions method
 Default = txid}

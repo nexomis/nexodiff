@@ -196,18 +196,44 @@ set_mean_function <- function(
 
 # Utils function to generate file paths for counts files and check
 # their existence
-get_counts_file_path <- function(src_dir, sample_name) {
-  # Construct the potential file paths
-  path_abundance <- file.path(src_dir, sample_name, "abundance.h5")
-  path_simple <- file.path(src_dir, paste0(sample_name, ".h5"))
+get_counts_file_path <- function(src_dir, sample_name, quant_source = "kallisto") {
+  # Construct the potential file paths based on quant_source
+  if (quant_source == "kallisto") {
+    path_abundance <- file.path(src_dir, sample_name, "abundance.h5")
+    path_simple <- file.path(src_dir, paste0(sample_name, ".h5"))
 
-  # Check file existence and decide which path to return
-  if (file.exists(path_abundance)) {
-    return(path_abundance)
-  } else if (file.exists(path_simple)) {
-    return(path_simple)
+    # Check file existence and decide which path to return
+    if (file.exists(path_abundance)) {
+      return(path_abundance)
+    } else if (file.exists(path_simple)) {
+      return(path_simple)
+    } else {
+      stop("No valid kallisto file found for sample: ", sample_name)
+    }
+  } else if (quant_source == "salmon") {
+    # Priority: quant.sf > quant.sf.gz > <sample>.sf > <sample>.sf.gz
+    path_quant_sf <- file.path(src_dir, sample_name, "quant.sf")
+    path_quant_sf_gz <- file.path(src_dir, sample_name, "quant.sf.gz")
+    path_simple_sf <- file.path(src_dir, paste0(sample_name, ".sf"))
+    path_simple_sf_gz <- file.path(src_dir, paste0(sample_name, ".sf.gz"))
+
+    # Check file existence in priority order
+    if (file.exists(path_quant_sf)) {
+      return(path_quant_sf)
+    } else if (file.exists(path_quant_sf_gz)) {
+      return(path_quant_sf_gz)
+    } else if (file.exists(path_simple_sf)) {
+      return(path_simple_sf)
+    } else if (file.exists(path_simple_sf_gz)) {
+      return(path_simple_sf_gz)
+    } else {
+      stop("No valid salmon file found for sample: ", sample_name,
+           " (looked for quant.sf, quant.sf.gz, ", sample_name, 
+           ".sf, ", sample_name, ".sf.gz)")
+    }
   } else {
-    stop("No valid file found for sample: ", sample_name)
+    stop("Invalid quant_source: ", quant_source, 
+         ". Must be 'kallisto' or 'salmon'.")
   }
 }
 

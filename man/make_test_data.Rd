@@ -4,12 +4,15 @@
 \alias{make_test_data}
 \title{Simulate data from config}
 \usage{
-make_test_data(set_id, tmp_dir)
+make_test_data(set_id, tmp_dir, quant_source = "kallisto")
 }
 \arguments{
 \item{set_id}{set_id for data simulation}
 
 \item{tmp_dir}{where to create the dataset}
+
+\item{quant_source}{The source of quantification files. Either "kallisto"
+(default) or "salmon". This determines the output file format.}
 }
 \value{
 create all files and return paths

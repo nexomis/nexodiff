@@ -18,13 +18,12 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
     #' @param with_fixed_length A boolean indicating whether the NGS library is
     #' of a fixed length like 3 prime or not
     #' @param log_level Level of logging (see logging package). Default = WARN
-    #' @param format Format of files. Default=kallisto
     #' @param suffix_pattern See clean_txid_versions method
     #' Default = txid
     #' @return A new `ExprDataTranscript` object.
     initialize = function(
       design, annotation, with_fixed_length = FALSE, log_level = "WARN",
-      format = "kallisto", suffix_pattern = "\\.\\d+$"
+      suffix_pattern = "\\.\\d+$"
     ) {
       logging::basicConfig(log_level)
 
@@ -40,7 +39,16 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
 
       # Import data
 
-      logging::loginfo("Import transcript abundance files (.h5)")
+      quant_source <- design$get_quant_source()
+
+      if (quant_source == "kallisto") {
+        logging::loginfo("Import transcript abundance files (.h5)")
+      } else if (quant_source == "salmon") {
+        logging::loginfo("Import transcript abundance files (quant.sf)")
+      } else {
+        logging::logerror("Invalid quant_source: ", quant_source, ". Must be 'kallisto' or 'salmon'.")
+        stop()
+      }
 
       files <- private$design$build_file_paths()
 
@@ -50,7 +58,7 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
         stop()
       }
 
-      if (format == "kallisto") {
+      if (quant_source == "kallisto") {
 
         private$raw <- NULL
         private$selected_ids <- NULL
@@ -88,8 +96,52 @@ ExprDataTranscript <- R6::R6Class("ExprDataTranscript", # nolint
           }
         }
 
+      } else if (quant_source == "salmon") {
+
+        private$raw <- NULL
+        private$selected_ids <- NULL
+
+        for (sample_name in names(files)) {
+
+          fpath <- files[[sample_name]]
+
+          # Read salmon quant.sf file (TSV format with header)
+          # Columns: Name, Length, EffectiveLength, TPM, NumReads
+          salmon_data <- data.table::fread(fpath, header = TRUE)
+
+          ids <- as.character(salmon_data$Name)
+
+          # Check for duplicates in ids
+          assert_that(!any(duplicated(ids)))
+
+          if (is.null(private$selected_ids)) {
+            private$selected_ids <- ids
+            private$raw <- matrix(1, nrow = length(ids),
+                                  ncol = length(files))
+            rownames(private$raw) <- ids
+            colnames(private$raw) <- names(files)
+            private$len <- private$raw
+            slug_ids <- digest::digest(sort(ids))
+          } else {
+            assert_that(digest::digest(sort(ids)) == slug_ids)
+          }
+
+          # Read counts (NumReads column) and verify dimensions before assignment
+          counts <- salmon_data$NumReads
+          assert_that(length(counts) == length(ids))
+
+          private$raw[ids, sample_name] <- counts
+
+          if (! with_fixed_length) {
+            # Use EffectiveLength from salmon
+            lengths <- salmon_data$EffectiveLength
+            assert_that(length(lengths) == length(ids))
+            private$len[ids, sample_name] <- lengths
+          }
+        }
+
       } else {
-        logging::logerror("wrong value for `format` argument")
+        logging::logerror("wrong value for `quant_source`: ", quant_source)
         stop()
       }
 

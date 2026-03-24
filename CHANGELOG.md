@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Salmon Quantification Support**: Added support for Salmon quantification files (quant.sf) as an alternative to Kallisto (.h5 files).
+   - New `quant_source` parameter in [`PairwiseDesign`](R/class_PairwiseDesign.r:1) class (default: "kallisto", alternative: "salmon")
+   - Updated [`ExprDataTranscript`](R/class_ExprDataTranscript.r:1) to read Salmon quant.sf format (Name, Length, EffectiveLength, TPM, NumReads columns)
+   - [`get_counts_file_path()`](R/utils.r:1) now supports multiple Salmon file patterns: quant.sf, quant.sf.gz, <sample>.sf, <sample>.sf.gz
+   - [`make_test_data()`](R/make_test_data.r:1) can generate simulated data in both Kallisto (.h5) and Salmon (quant.sf) formats
+   - Removed `format` parameter from [`ExprDataTranscript`](R/class_ExprDataTranscript.r:1) (now determined automatically from `quant_source`)
+
 - **Ensembl GFF3 Support**: Added support for parsing Ensembl-style GFF3 files alongside existing NCBI format.
    - New `gff_source` parameter in [`Annotation`](R/class_Annotation.r:1) class and [`parse_gff_to_annotation()`](R/parse_gff_to_annotation.r:1) function
    - Supports both `"ncbi"` (default) and `"ensembl"` formats
@@ -31,15 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Devcontainer Configuration**:
-  - Changed VS Code extension from `saoudrizwan.claude-dev` to `kilocode.kilo-code`
-  - Removed nvm, Node.js v24, and Allure CLI installation from Dockerfile
-
 - **Documentation**:
   - Updated README.md with improved formatting and links to TESTING.md
   - Added Continuous Integration section documenting GitHub Actions triggers
-
-- **Gitignore**: Added `/allure-report` and `/*gff3.gz` patterns
 
 - **Integration Test Reorganization**: Updated integration test suite to include Ensembl GFF3 support and improved snapshot testing
 

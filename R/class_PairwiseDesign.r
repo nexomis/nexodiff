@@ -40,11 +40,20 @@ PairwiseDesign <- R6::R6Class( # nolint
     #' for each run to the folder with expression files. In case of several runs
     #' defined in the design file, a named vector is required. Can be specified
     #' for YML also but only 1 value for all runs.
+    #' @param quant_source The source of quantification files. Either "kallisto"
+    #' (default) or "salmon". This determines the file patterns to look for.
     #'
     #' @return A new `PairwiseDesignWithAnnotation` object.
-    initialize = function(pairwise_design_file, src_dir = NULL) {
+    initialize = function(pairwise_design_file, src_dir = NULL, quant_source = "kallisto") {
 
       logging::logdebug("Parse pairwise design")
+
+      # Validate quant_source
+      if (!quant_source %in% c("kallisto", "salmon")) {
+        logging::logerror("quant_source must be either 'kallisto' or 'salmon'")
+        stop()
+      }
+      private$quant_source <- quant_source
 
       file_ext <- tolower(tools::file_ext(pairwise_design_file))
       if (file_ext %in% c("yml", "yaml")) {
@@ -87,6 +96,13 @@ PairwiseDesign <- R6::R6Class( # nolint
     },
 
     #' @description
+    #' get quantification source
+    #' @return character string, either "kallisto" or "salmon"
+    get_quant_source = function() {
+      private$quant_source
+    },
+
+    #' @description
     #' get the paths of files with raw expression data for all samples
     #' @return named vector with paths and sample name as keys
     build_file_paths = function() {
@@ -99,6 +115,7 @@ PairwiseDesign <- R6::R6Class( # nolint
             get_counts_file_path,
             rep(private$src_dir[iter_run_id], length(iter_sample_info)),
             iter_sample_info,
+            MoreArgs = list(quant_source = private$quant_source),
             SIMPLIFY = TRUE
           )
           names(iter_files) <- unique(subset(self$get_pairwise_design(),
@@ -111,6 +128,7 @@ PairwiseDesign <- R6::R6Class( # nolint
           get_counts_file_path,
           rep(private$src_dir, length(iter_sample_info)),
           iter_sample_info,
+          MoreArgs = list(quant_source = private$quant_source),
           SIMPLIFY = TRUE
         )
         names(files) <- unique(self$get_pairwise_design()$sample)
@@ -279,6 +297,8 @@ PairwiseDesign <- R6::R6Class( # nolint
     src_dir = NULL,
     # sample names selected based on filters
     selected_samples = NULL,
+    # quantification source (kallisto or salmon)
+    quant_source = NULL,
 
     # initialize pairwise_design based on yml input
     initialize_pairwise_design_yml = function(pairwise_design_file,

@@ -4,9 +4,16 @@
 #'
 #' @param set_id set_id for data simulation
 #' @param tmp_dir where to create the dataset
+#' @param quant_source The source of quantification files. Either "kallisto"
+#' (default) or "salmon". This determines the output file format.
 #' @return create all files and return paths
 #' @export
-make_test_data <- function(set_id, tmp_dir) {
+make_test_data <- function(set_id, tmp_dir, quant_source = "kallisto") {
+
+  # Validate quant_source
+  if (!quant_source %in% c("kallisto", "salmon")) {
+    stop("quant_source must be either 'kallisto' or 'salmon'")
+  }
 
   config_dir_path <- system.file("extdata",
     paste("sim_inputs", set_id, sep = "/"),
@@ -106,14 +113,52 @@ make_test_data <- function(set_id, tmp_dir) {
   len_csv_path <- file.path(csv_config_dir, "tx_len.csv")
   len <- readr::read_csv(len_csv_path, show_col_types = FALSE)
 
-  for (sample in names(raw)){
-    h5_file_name <- paste(tmp_dir, "/", sample, ".h5", sep = "")
-    invisible(suppressWarnings(file.remove(h5_file_name)))
-    rhdf5::h5createFile(h5_file_name)
-    rhdf5::h5createGroup(h5_file_name, "aux")
-    rhdf5::h5write(raw[, sample][[1]], h5_file_name, "est_counts")
-    rhdf5::h5write(len[, sample][[1]], h5_file_name, "aux/eff_lengths")
-    rhdf5::h5write(annotation[, "txid"][[1]], h5_file_name, "aux/ids")
+  # Read annotation to get txid
+  tx_ids <- annotation[, "txid"][[1]]
+
+  if (quant_source == "kallisto") {
+    for (sample in names(raw)){
+      h5_file_name <- paste(tmp_dir, "/", sample, ".h5", sep = "")
+      invisible(suppressWarnings(file.remove(h5_file_name)))
+      rhdf5::h5createFile(h5_file_name)
+      rhdf5::h5createGroup(h5_file_name, "aux")
+      rhdf5::h5write(raw[, sample][[1]], h5_file_name, "est_counts")
+      rhdf5::h5write(len[, sample][[1]], h5_file_name, "aux/eff_lengths")
+      rhdf5::h5write(tx_ids, h5_file_name, "aux/ids")
+    }
+  } else if (quant_source == "salmon") {
+    for (sample in names(raw)){
+      # Create sample subdirectory for salmon format
+      sample_dir <- file.path(tmp_dir, sample)
+      if (!dir.exists(sample_dir)) {
+        dir.create(sample_dir)
+      }
+      quant_sf_path <- file.path(sample_dir, "quant.sf")
+
+      # Calculate TPM (for simplicity, set to 0 if counts are 0)
+      counts <- raw[, sample][[1]]
+      eff_lengths <- len[, sample][[1]]
+      rates <- counts / eff_lengths
+      tpm <- rates / sum(rates) * 1e6
+      tpm[is.nan(tpm)] <- 0  # Handle division by zero
+
+      # Create salmon quant.sf data frame
+      salmon_data <- data.frame(
+        Name = tx_ids,
+        Length = as.integer(eff_lengths * 1.2),  # Approximate actual length
+        EffectiveLength = eff_lengths,
+        TPM = tpm,
+        NumReads = counts
+      )
+
+      # Write quant.sf file (tab-separated)
+      readr::write_delim(
+        salmon_data,
+        file = quant_sf_path,
+        delim = "\t",
+        col_names = TRUE
+      )
+    }
   }
   results
 }
