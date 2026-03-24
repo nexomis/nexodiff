@@ -190,7 +190,6 @@ expr_tx = nexodiff::ExprDataTranscript$new(
   annotation = annot,
   with_fixed_length = TRUE,  # Specify if library prep has fixed length 
                              # (e.g., 3' sequencing)
-  format = "kallisto"   # Specify the format of input files
 )
 ```
 

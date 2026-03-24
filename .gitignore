@@ -80,7 +80,7 @@ test/out_dir
 
 /tests/testthat/fixtures/integration/ena_datasets/ERX1492351_out
 docs
-
+/vignettes/formats_files/libs
 
 # ignore working files
 /debug.R

@@ -1,11 +1,11 @@
 Package: nexodiff
 Type: Package
 Title: RNA-seq Differential Expression Analysis
-Version: 1.1.1
+Version: 1.2.0
 Date: 2025-05-23
 Authors@R: c(
     person("Julien", "FOURET", 
-           email = "jfouret@nexomis.io", 
+           email = "julien.fouret@cnrs.fr", 
            role = c("aut", "cre")),
     person("Abdelghafar", "Goumaidi", 
            role = "aut"),
@@ -63,6 +63,7 @@ Imports:
     rhdf5,
     rstan (>= 2.18.1),
     scales,
+    stringi,
     stringr,
     tibble,
     tidyr,
