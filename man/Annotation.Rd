@@ -46,7 +46,8 @@ This method initializes a new \code{Annotation} object.
   annotation_dir = NULL,
   log_level = "WARN",
   suffix_pattern = "\\\\.\\\\d+$",
-  gff_type_filter = c(".*RNA", ".*transcript")
+  gff_type_filter = c(".*RNA", ".*transcript"),
+  gff_source = c("ncbi", "ensembl")
 )}\if{html}{\out{</div>}}
 }
 
@@ -73,6 +74,11 @@ method.}
 
 \item{\code{gff_type_filter}}{Vector of regex patterns to filter the type column
 (3rd column of GFF)}
+
+\item{\code{gff_source}}{GFF format source: "ncbi" (default) or "ensembl".
+NCBI style looks for ID, Parent, gene, Dbxref, gbkey attributes.
+Ensembl style looks for ID (with transcript: prefix), gene_id,
+transcript_id, Parent (with gene: prefix), and Name attributes.}
 }
 \if{html}{\out{</div>}}
 }

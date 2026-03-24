@@ -4,13 +4,28 @@
 \alias{parse_gff_to_annotation}
 \title{Parse GFF file to annotation format}
 \usage{
-parse_gff_to_annotation(gff_file, type_filter = c(".*RNA", ".*transcript"))
+parse_gff_to_annotation(
+  gff_file,
+  type_filter = c(".*RNA", ".*transcript"),
+  source_db = c("ncbi", "ensembl"),
+  tax_id = NULL
+)
 }
 \arguments{
 \item{gff_file}{Path to the GFF file or URL}
 
 \item{type_filter}{Vector of regex patterns to filter the type column
 (3rd column)}
+
+\item{source_db}{GFF format source: "ncbi" (default) or "ensembl".
+NCBI style looks for ID, Parent, gene, Dbxref, gbkey attributes.
+Ensembl style looks for ID (with transcript: prefix), gene_id,
+transcript_id, Parent (with gene: prefix), and Name attributes.}
+
+\item{tax_id}{Optional taxon ID to use. If provided, this will be used
+instead of extracting from region entries in the GFF file. This is
+particularly useful for Ensembl GFF files which don't have taxon info
+in region entries.}
 }
 \value{
 A data frame with columns: txid, gid, type, symbol, tax_id

@@ -4,20 +4,26 @@
 \alias{fetch_id_mapping}
 \title{Extract id_mapping table from UniProt API}
 \usage{
-fetch_id_mapping(tax_id)
+fetch_id_mapping(tax_id, source_db = c("ncbi", "ensembl"), txid2gid = NULL)
 }
 \arguments{
 \item{tax_id}{Taxonomic ID to filter the UniProt database.}
+
+\item{source_db}{The source database of gene ID to fetch. Either "ncbi" (for GeneID) or "ensembl".}
 }
 \value{
-A data frame containing the id_mapping table.
+A data frame containing the id_mapping table with columns:
+uniprot, status, names, gene_names, gid, score
 }
 \description{
 This function extracts the id_mapping table from the UniProt API based on the specified taxonomic ID.
+It fetches protein information and then maps UniProt IDs to the target gene ID type using
+the UniProt ID mapping API.
 }
 \examples{
 \dontrun{
 id_mapping <- fetch_id_mapping(tax_id = 9606)
+id_mapping_ensembl <- fetch_id_mapping(tax_id = 9606, source_db = "ensembl")
 }
 
 }

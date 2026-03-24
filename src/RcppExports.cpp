@@ -11,15 +11,15 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // parse_gff_attributes
-DataFrame parse_gff_attributes(CharacterVector attr_strings, CharacterVector types, CharacterVector style);
-RcppExport SEXP _nexodiff_parse_gff_attributes(SEXP attr_stringsSEXP, SEXP typesSEXP, SEXP styleSEXP) {
+DataFrame parse_gff_attributes(CharacterVector gff_attributes, CharacterVector feature_types, CharacterVector annotation_style);
+RcppExport SEXP _nexodiff_parse_gff_attributes(SEXP gff_attributesSEXP, SEXP feature_typesSEXP, SEXP annotation_styleSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< CharacterVector >::type attr_strings(attr_stringsSEXP);
-    Rcpp::traits::input_parameter< CharacterVector >::type types(typesSEXP);
-    Rcpp::traits::input_parameter< CharacterVector >::type style(styleSEXP);
-    rcpp_result_gen = Rcpp::wrap(parse_gff_attributes(attr_strings, types, style));
+    Rcpp::traits::input_parameter< CharacterVector >::type gff_attributes(gff_attributesSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type feature_types(feature_typesSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type annotation_style(annotation_styleSEXP);
+    rcpp_result_gen = Rcpp::wrap(parse_gff_attributes(gff_attributes, feature_types, annotation_style));
     return rcpp_result_gen;
 END_RCPP
 }
