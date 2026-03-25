@@ -490,21 +490,11 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         }
       }
 
-      data <- data %>%
-        dplyr::rename_with(function(x) ("tag_id_select"),
-          tidyselect::all_of(tag_id_select)
-        )
-      if (tag_id_select != tag_id_show) {
-        data <- data %>%
-          dplyr::rename_with(function(x) ("tag_id_show"),
-            tidyselect::all_of(tag_id_show)
-          )
-      } else {
-        data$tag_id_show <- data$tag_id_select
-      }
+
 
       if (! is.null(select_ids)) {
-        data$selected <- as.vector(data[, "tag_id_select"])[[1]] %in% select_ids
+        data$selected <- as.vector(data[, tag_id_select])[[1]] %in% select_ids
+        data$tag_id_show <- data[[tag_id_show]]
         data <- data %>%
           dplyr::mutate(status = dplyr::if_else(
             .data$selected,
@@ -612,7 +602,8 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         ))
         stop()
       }
-
+      base_id <- private$expr_data$get_main_etag()
+      annot <- private$expr_data$get_annotation()
       data <- dplyr::filter(self$extract_data_for_plot(...), .data$baseMean > 0)
 
       if (
@@ -622,17 +613,36 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         show_selected_ids <- FALSE
       }
 
+      ellipsis <- list(...)
+      if ("tag_id_show" %in% names(ellipsis)) {
+        tag_id_show_param <- ellipsis$tag_id_show  # Store the parameter value for later use
+      } else {
+        tag_id_show_param <- "symbol"
+      }
+      
+      # Generate translation dictionary and safely translate
+      if (tag_id_show_param %in% annot$get_to_ids(base_id)) {
+        translate_dict <- annot$generate_translate_dict(base_id, tag_id_show_param)
+      } else {
+        stop("tag_id_show value is wrong")
+      }
+
       batch2label <- private$expr_data$get_design()$get_b_labels()
       group2label <- private$expr_data$get_design()$get_g_labels()
       facet_nrow <- length(unique(names(batch2label)))
       facet_labeller <- ggplot2::labeller(
         batch = ggplot2::as_labeller(batch2label),
-        group = ggplot2::as_labeller(group2label)
+        group = ggplot2::as_labeller(group2label),
+        tag_id_unique = ggplot2::as_labeller(function(x) safe_translate_ids(translate_dict, x))
       )
 
       # order batch and groups like labels
       data$batch <- factor(data$batch, levels = names(batch2label))
-      data$group <- factor(data$group, levels = names(group2label))
+      data$group <- factor(data$group, levels = names(group2label))      
+      
+      # Create a unique tag identifier using base_id for grouping
+      data$tag_id_unique <- data[[base_id]]
+      
 
       if (plot_type %in% c("ma", "vulcano")) {
         if (batch_layout == "facet_nested_wrap") {
@@ -656,13 +666,13 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         }
         ltitle <- "Analysis outcome"
         data$aes <- data$status
-        data$aes_group <- data$tag_id_select
+        data$aes_group <- data$tag_id_unique
         data$y <- data$log2FoldChange
         y_lab <- "A - Log2(FoldChange)"
       } else if (plot_type == "vulcano") {
         data$aes <- data$status
         ltitle <- "Analysis outcome"
-        data$aes_group <- data$tag_id_select
+        data$aes_group <- data$tag_id_unique
         data$x <- data$log2FoldChange
         data$y <- - log10(data$pval)
         x_lab <- "Log2(FoldChange)"
@@ -692,16 +702,16 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
           }
 
           if (batch_layout == "facet_nested_wrap") {
-            facet_formula <- formula("~ batch + tag_id_show")
+            facet_formula <- formula("~ batch + tag_id_unique")
           } else if (batch_layout == "facet_grid_y") {
-            facet_formula <- formula("batch ~ tag_id_show")
+            facet_formula <- formula("batch ~ tag_id_unique")
           } else if (batch_layout == "facet_grid_x") {
-            facet_formula <- formula("tag_id_show ~ batch")
+            facet_formula <- formula("tag_id_unique ~ batch")
           } else {
-            facet_formula <- formula("~ tag_id_show")
+            facet_formula <- formula("~ tag_id_unique")
           }
 
-          facet_nrow <- length(unique(data$tag_id_select))
+          facet_nrow <- length(unique(data$tag_id_unique))
         }
       } else {
         logging::logerror("`plot_type` argument is not recognized")
@@ -731,7 +741,7 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         ltitle <- "Analysis batch"
       } else {
         data$aes <- data$status
-        data$aes_group <- data$tag_id_select
+        data$aes_group <- data$tag_id_unique  # Use unique ID for grouping
         ltitle <- "Analysis outcome"
       }
       g <-
@@ -1049,9 +1059,16 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
 
       ellispis_args = list(...)
       if ("tag_id_show" %in% names(ellispis_args)){
-        tag_id_show <- ellispis_args$tag_id_show
+        tag_id_show_param <- ellispis_args$tag_id_show
       } else {
-        tag_id_show <- "symbol"
+        tag_id_show_param <- "symbol"
+      }
+      base_id <- private$expr_data$get_main_etag()
+      annot <- private$expr_data$get_annotation()
+      if (tag_id_show_param %in% annot$get_to_ids(base_id)) {
+        translate_dict <- annot$generate_translate_dict(base_id, tag_id_show_param)
+      } else {
+        stop("tag_id_show value is wrong")
       }
 
       data <- self$extract_data_for_plot(...)
@@ -1077,9 +1094,7 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
           max_abs_value = max_abs_value_hclust2
         )
       }
-
-      # Get the base id (actual unique tag id) for clustering
-      base_id <- private$expr_data$get_main_etag()
+      
       tag_levels <- tag_clust$labels[tag_clust$order]
 
       # Use base id for the factor levels (unique ids)
@@ -1098,7 +1113,8 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       group2label <- private$expr_data$get_design()$get_g_labels()
 
       facet_labeller <- ggplot2::labeller(
-        batch = ggplot2::as_labeller(batch2label)
+        batch = ggplot2::as_labeller(batch2label),
+        tag_id_unique = ggplot2::as_labeller(function(x) safe_translate_ids(translate_dict, x))
       )
 
       # order batch and groups like labels
@@ -1127,9 +1143,8 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
           ggplot2::geom_tile() +
           ggplot2::labs(fill = plot_value, y = "Expression tag", x = "Group") +
           ggplot2::scale_y_discrete(
-            labels = private$expr_data$get_annotation()$generate_translate_dict(
-              base_id, tag_id_show
-            )
+            labels = function(x) safe_translate_ids(translate_dict, x)
+        
           ) +
           THEME_NEXOMIS
           if (!("selected" %in% names(data)) & (show_selected_ids)) {
@@ -1142,6 +1157,7 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         main = make_heatmap(data),
         clust = tag_clust
       )
+      base_id <- private$expr_data$get_main_etag()
 
       if (! is.null(cut_tree_k)) {
         cut_heatmap <- list()
@@ -1149,7 +1165,7 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         for (i in 1:cut_tree_k) {
           cluster_tags <- names(clusters)[clusters == i]
           cut_heatmap[[i]] <- make_heatmap(dplyr::filter(data,
-            .data$tag_id_show %in% cluster_tags
+            .data[[base_id]] %in% cluster_tags
           ))
         }
         results[["clust2"]] <- tag_clust2
