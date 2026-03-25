@@ -18,7 +18,7 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Julien FOURET \email{jfouret@nexomis.io}
+\strong{Maintainer}: Julien FOURET \email{julien.fouret@cnrs.fr}
 
 Authors:
 \itemize{

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-03-25
+
+### Fixed 
+
+- **Heatmap Clustering with Duplicate Display IDs**: Fixed an error in [`PairwiseComp$plot_heatmap()`](R/class_PairwiseComp.r:986) where clustering was performed using `tag_id_show` (display IDs like gene symbols) which could contain duplicates. This caused the error `'list' object cannot be coerced to type 'double'` when computing distances. The fix now uses the actual unique `tag_id` (via [`get_main_etag()`](R/class_ExprData.r:1)) for clustering operations, while still displaying the user-friendly `tag_id_show` labels on the plot axes.
+
 ## [1.2.0] - 2026-03-24
 
 ### Added

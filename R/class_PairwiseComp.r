@@ -986,9 +986,12 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         dplyr::mutate(tag_value = dplyr::if_else(
           .data$tag_value < - max_abs_value, - max_abs_value, .data$tag_value))
 
+      # Get the base_id (actual tag_id: txid, tgid, or gid) for unique identification
+      base_id <- private$expr_data$get_main_etag()
+
       tag_x_group_wide <- data %>%
         dplyr::select(tidyselect::all_of(
-          c("tag_id_show", "batch", "group", "tag_value")
+          c(base_id, "batch", "group", "tag_value")
         )) %>%
         tidyr::pivot_wider(
           names_from = tidyselect::all_of(c("batch", "group")),
@@ -997,8 +1000,8 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
 
 
       tag_x_group_wide <- as.data.frame(tag_x_group_wide)
-      row.names(tag_x_group_wide) <- tag_x_group_wide$tag_id_show
-      tag_x_group_wide$tag_id_show <- NULL
+      row.names(tag_x_group_wide) <- tag_x_group_wide[[base_id]]
+      tag_x_group_wide[[base_id]] <- NULL
 
       tag_x_group_wide <- as.matrix(tag_x_group_wide)
       tag_x_group_wide[is.na(tag_x_group_wide)] <- 0
@@ -1044,6 +1047,13 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
       max_abs_value_hclust2 = 100, ...
     ) {
 
+      ellispis_args = list(...)
+      if ("tag_id_show" %in% names(ellispis_args)){
+        tag_id_show <- ellispis_args$tag_id_show
+      } else {
+        tag_id_show <- "symbol"
+      }
+
       data <- self$extract_data_for_plot(...)
 
       if ("selected" %in% names(data)) {
@@ -1068,9 +1078,12 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         )
       }
 
+      # Get the base id (actual unique tag id) for clustering
+      base_id <- private$expr_data$get_main_etag()
       tag_levels <- tag_clust$labels[tag_clust$order]
 
-      data$tag_id_show <- factor(data$tag_id_show, levels = tag_levels)
+      # Use base id for the factor levels (unique ids)
+      data$tag_id <- factor(data[[base_id]], levels = tag_levels)
 
       data <- data %>%
         dplyr::mutate(tag_value = .data[[plot_value]]) %>%
@@ -1096,7 +1109,7 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
         g <-
           ggplot2::ggplot(
             data,
-            ggplot2::aes(.data$group, .data$tag_id_show, fill = .data$tag_value)
+            ggplot2::aes(.data$group, .data$tag_id, fill = .data$tag_value)
           ) +
           ggplot2::scale_fill_gradient2(
             low = DOWN_COLOR,
@@ -1113,6 +1126,11 @@ PairwiseComp <- R6::R6Class("PairwiseComp", # nolint
           ) +
           ggplot2::geom_tile() +
           ggplot2::labs(fill = plot_value, y = "Expression tag", x = "Group") +
+          ggplot2::scale_y_discrete(
+            labels = private$expr_data$get_annotation()$generate_translate_dict(
+              base_id, tag_id_show
+            )
+          ) +
           THEME_NEXOMIS
           if (!("selected" %in% names(data)) & (show_selected_ids)) {
             g <- g + ggplot2::theme(axis.text.y = ggplot2::element_blank())
